@@ -3,7 +3,10 @@
 // each other, so any evidence used by more than one capability lives here.
 package facts
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 // Well-known evidence keys.
 const (
@@ -280,4 +283,41 @@ func equalFold(a, b string) bool {
 		}
 	}
 	return true
+}
+
+// Context classifies where a file sits for prioritisation: code that ships,
+// tests and fixtures, examples/demos, or documentation.
+type Context string
+
+const (
+	ContextProduction Context = "production"
+	ContextTest       Context = "test"
+	ContextExample    Context = "example"
+	ContextDocs       Context = "docs"
+)
+
+// PathContext classifies a slash-separated repository path by its directory
+// names. Capabilities use it to rank findings in non-shipping code lower.
+func PathContext(p string) Context {
+	segs := strings.Split(strings.ToLower(p), "/")
+	dirs := segs[:len(segs)-1]
+	base := segs[len(segs)-1]
+	for _, d := range dirs {
+		switch d {
+		case "test", "tests", "__tests__", "spec", "specs", "testdata", "fixtures", "__fixtures__", "mocks", "__mocks__", "e2e", "testing":
+			return ContextTest
+		}
+	}
+	if strings.HasSuffix(base, "_test.go") || strings.Contains(base, ".test.") || strings.Contains(base, ".spec.") || strings.HasPrefix(base, "test_") {
+		return ContextTest
+	}
+	for _, d := range dirs {
+		switch d {
+		case "example", "examples", "sample", "samples", "demo", "demos", "playground", "tutorial", "tutorials":
+			return ContextExample
+		case "docs", "doc", "documentation", "website":
+			return ContextDocs
+		}
+	}
+	return ContextProduction
 }
