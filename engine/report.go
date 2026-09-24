@@ -177,6 +177,14 @@ func (e *Engine) scores(st *State, fs []finding.Finding) []report.Score {
 			}
 		}
 		value := int(math.Round(math.Min(capOf, 100/(1+penalty/scoreHalfPoint))))
+		// Credit every capability that assessed or contributed to the dimension.
+		contributors := slices.Clone(di.ran)
+		for _, f := range dimFindings {
+			if !slices.Contains(contributors, f.Source.Capability) {
+				contributors = append(contributors, f.Source.Capability)
+			}
+		}
+		sort.Strings(contributors)
 		conf := finding.ConfidenceHigh
 		if len(di.missing) > 0 {
 			conf = finding.ConfidenceMedium
@@ -187,7 +195,7 @@ func (e *Engine) scores(st *State, fs []finding.Finding) []report.Score {
 		counts := finding.Counts(dimFindings)
 		out = append(out, report.Score{
 			ID: d, Name: DimensionName(d), Value: value, Rating: report.Rating(value), Confidence: conf,
-			Summary: scoreSummary(counts, di.ran, di.missing), Counts: counts, Capabilities: di.ran,
+			Summary: scoreSummary(counts, contributors, di.missing), Counts: counts, Capabilities: contributors,
 			Methodology: MethodologyBase + "#" + d,
 		})
 	}
