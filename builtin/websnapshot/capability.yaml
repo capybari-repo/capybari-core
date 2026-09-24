@@ -1,8 +1,8 @@
 id: web-snapshot
 name: Website Snapshot
-version: 0.1.0
+version: 0.2.0
 category: website
-summary: Fetches the website's front page once (following redirects) and records headers, TLS, cookies and page structure for other website capabilities.
+summary: Fetches the website's front page (following redirects) and up to 5 linked pages of the same site, recording headers, TLS, cookies, page structure and visible text for other website capabilities.
 stability: stable
 core_api: v0
 targets: [website]
@@ -14,8 +14,10 @@ execution:
   ai: none
   network_hosts: [$target]
 privacy: >-
-  Sends ordinary HTTP GET requests for the site's front page (and the plain-http
-  version of it, to check the HTTPS redirect) to the scanned website only. No
+  Sends ordinary HTTP GET requests to the scanned website only: the front page,
+  its plain-http version (to check the HTTPS redirect), robots.txt, and at most
+  5 same-site pages linked from the front page, one at a time and honouring
+  robots.txt. Login, logout, admin, cart and file links are never followed. No
   source code or personal data is sent.
 follow_ups:
   - capability: web-tech

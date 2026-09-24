@@ -252,8 +252,24 @@ type WebSnapshot struct {
 	Title        string              `json:"title,omitempty"`
 	Meta         map[string]string   `json:"meta,omitempty"`
 	Resources    []Resource          `json:"resources,omitempty"`
-	FetchedAt    time.Time           `json:"fetched_at"`
-	DurationMS   int64               `json:"duration_ms"`
+	// Links are same-site page links found on the front page.
+	Links []string `json:"links,omitempty"`
+	// Pages are additional same-site pages read after the front page.
+	Pages      []WebPage `json:"pages,omitempty"`
+	FetchedAt  time.Time `json:"fetched_at"`
+	DurationMS int64     `json:"duration_ms"`
+}
+
+// WebPage is an additional page of the same site. HTML and Text are
+// internal evidence for analyzers and are stripped from published reports.
+type WebPage struct {
+	URL       string `json:"url"`
+	Status    int    `json:"status"`
+	Title     string `json:"title,omitempty"`
+	Generator string `json:"generator,omitempty"`
+	HTML      string `json:"html,omitempty"`
+	Text      string `json:"text,omitempty"`
+	Words     int    `json:"words"`
 }
 
 // Header returns the first value of a header, case-insensitively.

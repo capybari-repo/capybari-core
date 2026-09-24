@@ -81,7 +81,10 @@ type Score struct {
 	Summary      string                   `json:"summary"`
 	Counts       map[finding.Severity]int `json:"counts"`
 	Capabilities []string                 `json:"capabilities"`
-	Methodology  string                   `json:"methodology"`
+	// Basis says what was examined to produce the score (one line per
+	// contributing capability), so a perfect score is never unexplained.
+	Basis       []string `json:"basis,omitempty"`
+	Methodology string   `json:"methodology"`
 }
 
 // Recommendation kinds.

@@ -3,6 +3,8 @@ package websnapshot_test
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/capybari-repo/capybari-core/analyzertest"
@@ -49,5 +51,54 @@ func TestSnapshot(t *testing.T) {
 	}
 	if !r.DataBoundary.LeftMachine || len(r.DataBoundary.Disclosures) != 1 {
 		t.Fatalf("data boundary: %+v", r.DataBoundary)
+	}
+}
+
+func TestCrawlIsPolite(t *testing.T) {
+	var mu sync.Mutex
+	requested := map[string]bool{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		requested[r.URL.Path] = true
+		mu.Unlock()
+		switch r.URL.Path {
+		case "/robots.txt":
+			w.Write([]byte("User-agent: *\nDisallow: /private\n"))
+		case "/":
+			w.Header().Set("Content-Type", "text/html")
+			w.Write([]byte(`<html><body>
+<a href="/about">About</a> <a href="/about#team">Team</a> <a href="/private/plans">Plans</a>
+<a href="/logout">Log out</a> <a href="/wp-login.php?action=logout">Log out 2</a> <a href="/brochure.pdf">PDF</a> <a href="https://other.example/x">Elsewhere</a>
+<a href="mailto:a@b.c">Mail</a> <a href="/blog">Blog</a></body></html>`))
+		case "/about", "/blog":
+			w.Header().Set("Content-Type", "text/html")
+			w.Write([]byte(`<html><head><title>` + r.URL.Path + `</title><meta name="generator" content="Hugo 0.1"></head><body><p>Some words here.</p><script>ignored()</script></body></html>`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+	_, st := analyzertest.RunState(t, websnapshot.New(), analyzertest.Website(srv.URL), analyzertest.Options{Online: true})
+	var ws facts.WebSnapshot
+	st.Get(facts.KeyWebSnapshot, &ws)
+	if len(ws.Pages) != 2 {
+		t.Fatalf("pages = %+v", ws.Pages)
+	}
+	for _, p := range ws.Pages {
+		if p.Words != 4 || p.Generator != "Hugo 0.1" || strings.Contains(p.Text, "ignored") {
+			t.Fatalf("page not reduced correctly: %+v", p)
+		}
+	}
+	for _, forbidden := range []string{"/private/plans", "/logout", "/wp-login.php", "/brochure.pdf"} {
+		if requested[forbidden] {
+			t.Errorf("crawler requested %s", forbidden)
+		}
+	}
+	// Reports never carry page markup or text.
+	r := analyzertest.Run(t, websnapshot.New(), analyzertest.Website(srv.URL), analyzertest.Options{Online: true})
+	var pub facts.WebSnapshot
+	r.Fact(facts.KeyWebSnapshot, &pub)
+	if len(pub.Pages) != 2 || pub.Pages[0].HTML != "" || pub.Pages[0].Text != "" || len(pub.Links) != 0 {
+		t.Fatalf("public fact leaks page content: %+v", pub.Pages)
 	}
 }

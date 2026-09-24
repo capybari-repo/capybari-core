@@ -101,6 +101,12 @@ func WriteMarkdown(w io.Writer, r *Report) error {
 			p("| %s | **%d** | %s | %s | %s |\n", s.Name, s.Value, s.Rating, s.Confidence, mdEscape(s.Summary))
 		}
 		p("\n")
+		for _, s := range r.Scores {
+			for _, b := range s.Basis {
+				p("- _%s basis:_ %s\n", s.Name, b)
+			}
+		}
+		p("\n")
 	}
 
 	writeIdentity(b, r)

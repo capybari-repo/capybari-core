@@ -53,7 +53,7 @@ footer{margin-top:48px;color:var(--muted);font-size:12.5px}
 {{range .Scores}}<a class="card score" href="#dim-{{.ID}}" title="{{.Summary}}">
 <div class="n">{{.Name}}</div><div class="v {{.Rating}}">{{.Value}}<span class="muted" style="font-size:15px">/100</span></div>
 <div class="bar"><i class="bg-{{.Rating}}" style="width:{{.Value}}%"></i></div>
-<div class="s">{{.Rating}} · {{.Confidence}} confidence</div><div class="s">{{.Summary}}</div></a>
+<div class="s">{{.Rating}} · {{.Confidence}} confidence</div><div class="s">{{.Summary}}</div>{{range .Basis}}<div class="s">Checked: {{.}}</div>{{end}}</a>
 {{end}}
 </div>
 {{end}}

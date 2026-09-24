@@ -18,10 +18,13 @@ import (
 	"strings"
 	"time"
 
+	"regexp"
+
 	"golang.org/x/net/html"
 
 	"github.com/capybari-repo/capybari-core/analyzer"
 	"github.com/capybari-repo/capybari-core/facts"
+	"github.com/capybari-repo/capybari-core/webtext"
 )
 
 //go:embed capability.yaml
@@ -31,6 +34,12 @@ var capability = analyzer.MustParseCapability(capabilityYAML)
 
 // MaxBody is the maximum number of body bytes kept.
 const MaxBody = 2 << 20
+
+// MaxPages is how many additional same-site pages are read.
+const MaxPages = 5
+
+// maxPageBytes caps each additional page.
+const maxPageBytes = 512 << 10
 
 // Analyzer implements the web-snapshot capability.
 type Analyzer struct{}
@@ -131,10 +140,13 @@ func (*Analyzer) Analyze(ctx context.Context, in *analyzer.Input) (*analyzer.Res
 	if snap.Truncated {
 		limits = append(limits, fmt.Sprintf("Page body larger than %d bytes was truncated.", MaxBody))
 	}
-	limits = append(limits, "Only the front page was fetched; other pages and authenticated areas were not inspected.")
+	if final, err := url.Parse(snap.FinalURL); err == nil && snap.Status == 200 && len(snap.Links) > 0 {
+		snap.Pages = crawl(ctx, in.HTTP, final, snap.Links, MaxPages)
+	}
+	limits = append(limits, fmt.Sprintf("The front page and up to %d linked pages of the same site were read (%d this time); authenticated areas and the rest of the site were not inspected.", MaxPages, len(snap.Pages)))
 	return &analyzer.Result{
 		Evidence:    map[string]any{facts.KeyWebSnapshot: snap},
-		Summary:     fmt.Sprintf("HTTP %d from %s in %dms (%d bytes)", snap.Status, snap.FinalURL, snap.DurationMS, snap.BodyBytes),
+		Summary:     fmt.Sprintf("HTTP %d from %s in %dms (%d bytes); %d more page(s) read", snap.Status, snap.FinalURL, snap.DurationMS, snap.BodyBytes, len(snap.Pages)),
 		Limitations: limits,
 	}, nil
 }
@@ -254,6 +266,8 @@ func parsePage(s *facts.WebSnapshot, body []byte, base *url.URL) {
 					kind = "stylesheet"
 				}
 				addRes(kind, attrs["href"], attrs["integrity"] != "")
+			case "a":
+				addLink(s, attrs["href"], base)
 			case "iframe":
 				addRes("iframe", attrs["src"], false)
 			case "img":
@@ -263,4 +277,147 @@ func parsePage(s *facts.WebSnapshot, body []byte, base *url.URL) {
 			}
 		}
 	}
+}
+
+// skipLink excludes links that are not content pages or that could trigger
+// an action even over GET (logout, cart, delete...).
+var skipLink = regexp.MustCompile(`(?i)(logout|log-out|signout|sign-out|/cart|add-to-cart|/checkout|delete|unsubscribe|/wp-admin|/admin|login|/signin|/register|/feed|\.(pdf|zip|gz|jpe?g|png|gif|webp|svg|mp4|mp3|css|js|json|xml|ico|woff2?)$)`)
+
+// addLink records a same-host page link (fragment removed, deduplicated).
+func addLink(s *facts.WebSnapshot, href string, base *url.URL) {
+	href = strings.TrimSpace(href)
+	if href == "" || strings.HasPrefix(href, "#") || strings.HasPrefix(href, "mailto:") || strings.HasPrefix(href, "tel:") || strings.HasPrefix(href, "javascript:") {
+		return
+	}
+	u, err := base.Parse(href)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || !strings.EqualFold(u.Hostname(), base.Hostname()) {
+		return
+	}
+	u.Fragment = ""
+	if u.Path == "" {
+		u.Path = "/"
+	}
+	// Check path and query: "/wp-login.php?action=logout" must be skipped too.
+	if skipLink.MatchString(u.Path) || skipLink.MatchString(u.RawQuery) || u.Path == base.Path && u.RawQuery == base.RawQuery {
+		return
+	}
+	v := u.String()
+	for _, l := range s.Links {
+		if l == v {
+			return
+		}
+	}
+	if len(s.Links) < 200 {
+		s.Links = append(s.Links, v)
+	}
+}
+
+// crawl politely reads up to max linked pages: sequentially, same host,
+// honouring robots.txt, HTML only.
+func crawl(ctx context.Context, c *http.Client, base *url.URL, links []string, max int) []facts.WebPage {
+	rules := robots(ctx, c, base)
+	var pages []facts.WebPage
+	seenPath := map[string]bool{base.Path: true}
+	for _, l := range links {
+		if len(pages) >= max || ctx.Err() != nil {
+			break
+		}
+		u, err := url.Parse(l)
+		if err != nil || seenPath[u.Path] || !rules.allowed(u.Path) {
+			continue
+		}
+		seenPath[u.Path] = true
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, l, nil)
+		if err != nil {
+			continue
+		}
+		req.Header.Set("Accept", "text/html,application/xhtml+xml;q=0.9")
+		resp, err := c.Do(req)
+		if err != nil {
+			continue
+		}
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxPageBytes))
+		resp.Body.Close()
+		if resp.StatusCode != 200 || !isHTML(resp.Header.Get("Content-Type"), body) {
+			continue
+		}
+		p := facts.WebPage{URL: resp.Request.URL.String(), Status: resp.StatusCode, HTML: string(body)}
+		var tmp facts.WebSnapshot
+		parsePage(&tmp, body, resp.Request.URL)
+		p.Title, p.Generator = tmp.Title, tmp.Meta["generator"]
+		p.Text = webtext.Visible(p.HTML)
+		p.Words = webtext.Words(p.Text)
+		pages = append(pages, p)
+		time.Sleep(150 * time.Millisecond) // be gentle with small sites
+	}
+	return pages
+}
+
+type robotsRules struct{ disallow, allow []string }
+
+func (r robotsRules) allowed(p string) bool {
+	best, ok := -1, true
+	for _, a := range r.allow {
+		if strings.HasPrefix(p, a) && len(a) > best {
+			best, ok = len(a), true
+		}
+	}
+	for _, d := range r.disallow {
+		if d != "" && strings.HasPrefix(p, d) && len(d) > best {
+			best, ok = len(d), false
+		}
+	}
+	return ok
+}
+
+// robots reads the "User-agent: *" group of robots.txt (prefix rules).
+func robots(ctx context.Context, c *http.Client, base *url.URL) robotsRules {
+	var r robotsRules
+	u := &url.URL{Scheme: base.Scheme, Host: base.Host, Path: "/robots.txt"}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return r
+	}
+	resp, err := c.Do(req)
+	if err != nil {
+		return r
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return r
+	}
+	b, _ := io.ReadAll(io.LimitReader(resp.Body, 256<<10))
+	applies := false
+	inAgents := false
+	for _, line := range strings.Split(string(b), "\n") {
+		line = strings.TrimSpace(strings.SplitN(line, "#", 2)[0])
+		k, v, found := strings.Cut(line, ":")
+		if !found {
+			continue
+		}
+		k, v = strings.ToLower(strings.TrimSpace(k)), strings.TrimSpace(v)
+		switch k {
+		case "user-agent":
+			if !inAgents {
+				applies = false
+			}
+			inAgents = true
+			if v == "*" || strings.Contains(strings.ToLower(v), "capybari") {
+				applies = true
+			}
+		case "disallow":
+			inAgents = false
+			if applies {
+				r.disallow = append(r.disallow, v)
+			}
+		case "allow":
+			inAgents = false
+			if applies {
+				r.allow = append(r.allow, v)
+			}
+		default:
+			inAgents = false
+		}
+	}
+	return r
 }

@@ -116,6 +116,10 @@ func publicFact(key string, raw json.RawMessage) json.RawMessage {
 		var ws facts.WebSnapshot
 		if json.Unmarshal(raw, &ws) == nil {
 			ws.Body = ""
+			ws.Links = nil
+			for i := range ws.Pages {
+				ws.Pages[i].HTML, ws.Pages[i].Text = "", ""
+			}
 			if b, err := json.Marshal(ws); err == nil {
 				return b
 			}
@@ -185,6 +189,12 @@ func (e *Engine) scores(st *State, fs []finding.Finding) []report.Score {
 			}
 		}
 		sort.Strings(contributors)
+		var basis []string
+		for _, id := range contributors {
+			if rec, ok := st.Runs[id]; ok && rec.Run.Status == report.StatusOK && rec.Run.Summary != "" {
+				basis = append(basis, rec.Run.Name+": "+rec.Run.Summary)
+			}
+		}
 		conf := finding.ConfidenceHigh
 		if len(di.missing) > 0 {
 			conf = finding.ConfidenceMedium
@@ -195,7 +205,7 @@ func (e *Engine) scores(st *State, fs []finding.Finding) []report.Score {
 		counts := finding.Counts(dimFindings)
 		out = append(out, report.Score{
 			ID: d, Name: DimensionName(d), Value: value, Rating: report.Rating(value), Confidence: conf,
-			Summary: scoreSummary(counts, contributors, di.missing), Counts: counts, Capabilities: contributors,
+			Summary: scoreSummary(counts, contributors, di.missing), Counts: counts, Capabilities: contributors, Basis: basis,
 			Methodology: MethodologyBase + "#" + d,
 		})
 	}
