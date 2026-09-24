@@ -54,20 +54,20 @@ const (
 
 // CapabilityRun is the outcome of one capability in this scan.
 type CapabilityRun struct {
-	ID           string            `json:"id"`
-	Name         string            `json:"name"`
-	Version      string            `json:"version"`
-	Category     string            `json:"category"`
-	Status       string            `json:"status"`
-	Reason       string            `json:"reason,omitempty"`
-	Summary      string            `json:"summary,omitempty"`
-	DurationMS   int64             `json:"duration_ms"`
-	Cached       bool              `json:"cached,omitempty"`
-	Findings     int               `json:"findings"`
-	Experimental bool              `json:"experimental,omitempty"`
+	ID           string             `json:"id"`
+	Name         string             `json:"name"`
+	Version      string             `json:"version"`
+	Category     string             `json:"category"`
+	Status       string             `json:"status"`
+	Reason       string             `json:"reason,omitempty"`
+	Summary      string             `json:"summary,omitempty"`
+	DurationMS   int64              `json:"duration_ms"`
+	Cached       bool               `json:"cached,omitempty"`
+	Findings     int                `json:"findings"`
+	Experimental bool               `json:"experimental,omitempty"`
 	Execution    analyzer.Execution `json:"execution"`
-	Engines      []analyzer.Engine `json:"engines,omitempty"`
-	Limitations  []string          `json:"limitations,omitempty"`
+	Engines      []analyzer.Engine  `json:"engines,omitempty"`
+	Limitations  []string           `json:"limitations,omitempty"`
 }
 
 // Score is one dimension score. Every score uses the same direction:

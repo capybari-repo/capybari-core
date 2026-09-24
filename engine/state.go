@@ -22,9 +22,9 @@ type StoredArtifact struct {
 
 // RunRecord is the stored outcome of one capability.
 type RunRecord struct {
-	Run       report.CapabilityRun `json:"run"`
-	Findings  []finding.Finding    `json:"findings,omitempty"`
-	Artifacts []StoredArtifact     `json:"artifacts,omitempty"`
+	Run       report.CapabilityRun       `json:"run"`
+	Findings  []finding.Finding          `json:"findings,omitempty"`
+	Artifacts []StoredArtifact           `json:"artifacts,omitempty"`
 	Evidence  map[string]json.RawMessage `json:"evidence,omitempty"`
 }
 

@@ -125,11 +125,11 @@ func (*Analyzer) Analyze(ctx context.Context, in *analyzer.Input) (*analyzer.Res
 		}
 		findings = append(findings, finding.Finding{
 			Dimension: finding.DimMaintainability, Category: "repository-hygiene", Severity: finding.Low, Confidence: finding.ConfidenceHigh,
-			Title:       "Third-party dependencies committed to the repository",
-			Description: fmt.Sprintf("%d files under %s/ are tracked in git. Committed dependencies are hard to update and audit.", n, dir),
-			Evidence:    []finding.Evidence{{Location: finding.Location{Path: dir + "/"}}},
-			Rule:        &finding.Rule{ID: "committed-dependencies"},
-			Remediation: &finding.Remediation{Summary: "Install dependencies from a lockfile at build time instead of committing them, unless vendoring is a deliberate policy.", Automatable: false},
+			Title:                 "Third-party dependencies committed to the repository",
+			Description:           fmt.Sprintf("%d files under %s/ are tracked in git. Committed dependencies are hard to update and audit.", n, dir),
+			Evidence:              []finding.Evidence{{Location: finding.Location{Path: dir + "/"}}},
+			Rule:                  &finding.Rule{ID: "committed-dependencies"},
+			Remediation:           &finding.Remediation{Summary: "Install dependencies from a lockfile at build time instead of committing them, unless vendoring is a deliberate policy.", Automatable: false},
 			FalsePositiveGuidance: "Go vendor/ directories and some embedded-systems projects vendor dependencies deliberately.",
 		})
 	}

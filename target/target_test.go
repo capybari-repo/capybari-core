@@ -5,8 +5,8 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
-	"os"
 	"net/url"
+	"os"
 	"path/filepath"
 	"testing"
 

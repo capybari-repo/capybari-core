@@ -214,7 +214,7 @@ func TestExpandReusesCompletedWork(t *testing.T) {
 
 type memCache struct{ m map[string]*engine.RunRecord }
 
-func (c *memCache) Get(k string) (*engine.RunRecord, bool) { r, ok := c.m[k]; return r, ok }
+func (c *memCache) Get(k string) (*engine.RunRecord, bool)  { r, ok := c.m[k]; return r, ok }
 func (c *memCache) Put(k string, r *engine.RunRecord) error { c.m[k] = r; return nil }
 
 func TestCacheReusesResults(t *testing.T) {

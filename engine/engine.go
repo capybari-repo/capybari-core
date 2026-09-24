@@ -56,10 +56,14 @@ type Config struct {
 	Concurrency         int
 	CapabilityTimeout   time.Duration
 	Cache               Cache
-	UserAgent           string
-	Log                 *slog.Logger
-	Now                 func() time.Time
-	Progress            func(Event)
+	// CacheSalt is mixed into every cache key. Set it to something that
+	// changes with the analyzer code (e.g. a hash of the executable) so a
+	// rebuilt binary never reuses stale results.
+	CacheSalt string
+	UserAgent string
+	Log       *slog.Logger
+	Now       func() time.Time
+	Progress  func(Event)
 }
 
 // Selection chooses capabilities. Empty Only means "every applicable capability".
@@ -439,7 +443,7 @@ func (e *Engine) invoke(ctx context.Context, a analyzer.Analyzer, in *analyzer.I
 
 func (e *Engine) cacheKey(st *State, c analyzer.Capability, targetDigest string) string {
 	h := sha256.New()
-	fmt.Fprintf(h, "%s@%s\x00%s\x00%s\x00", c.ID, c.Version, e.cfg.Tool.Version, targetDigest)
+	fmt.Fprintf(h, "%s@%s\x00%s\x00%s\x00%s\x00", c.ID, c.Version, e.cfg.Tool.Version, e.cfg.CacheSalt, targetDigest)
 	keys := append(slices.Clone(c.Requires), c.Optional...)
 	sort.Strings(keys)
 	for _, k := range keys {

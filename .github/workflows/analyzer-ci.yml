@@ -34,6 +34,9 @@ jobs:
           done
       - uses: actions/setup-go@v5
         with: { go-version: "${{ inputs.go-version }}", cache-dependency-path: self/go.sum }
+      - name: Format
+        working-directory: self
+        run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
       - name: Vet
         working-directory: self
         run: go vet ./...

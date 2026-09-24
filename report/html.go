@@ -15,7 +15,7 @@ import (
 var htmlTemplate string
 
 var htmlTmpl = template.Must(template.New("report").Funcs(template.FuncMap{
-	"loc": location,
+	"loc":      location,
 	"sevcount": func(m map[finding.Severity]int, s string) int { return m[finding.Severity(s)] },
 	"join":     strings.Join,
 	"pct":      func(f float64) string { return fmt.Sprintf("%.0f%%", f*100) },

@@ -206,13 +206,13 @@ type Architecture struct {
 
 // TLSInfo describes the TLS connection used for a website snapshot.
 type TLSInfo struct {
-	Version      string    `json:"version"`
-	CipherSuite  string    `json:"cipher_suite"`
-	Issuer       string    `json:"issuer,omitempty"`
-	Subject      string    `json:"subject,omitempty"`
-	DNSNames     []string  `json:"dns_names,omitempty"`
-	NotAfter     time.Time `json:"not_after,omitzero"`
-	VerifyError  string    `json:"verify_error,omitempty"`
+	Version     string    `json:"version"`
+	CipherSuite string    `json:"cipher_suite"`
+	Issuer      string    `json:"issuer,omitempty"`
+	Subject     string    `json:"subject,omitempty"`
+	DNSNames    []string  `json:"dns_names,omitempty"`
+	NotAfter    time.Time `json:"not_after,omitzero"`
+	VerifyError string    `json:"verify_error,omitempty"`
 }
 
 // Cookie is a cookie set by the website, without its value.
