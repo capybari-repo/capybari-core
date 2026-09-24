@@ -53,9 +53,11 @@ type Config struct {
 	Hosted bool
 	// DenyPrivateNetworks blocks connections to non-public addresses.
 	DenyPrivateNetworks bool
-	Concurrency         int
-	CapabilityTimeout   time.Duration
-	Cache               Cache
+	// AllowPrivateNetworks lifts the hosted-mode block (tests only).
+	AllowPrivateNetworks bool
+	Concurrency          int
+	CapabilityTimeout    time.Duration
+	Cache                Cache
 	// CacheSalt is mixed into every cache key. Set it to something that
 	// changes with the analyzer code (e.g. a hash of the executable) so a
 	// rebuilt binary never reuses stale results.
@@ -97,7 +99,7 @@ func New(cfg Config) *Engine {
 	if cfg.UserAgent == "" {
 		cfg.UserAgent = "capybari-source-intelligence/" + cfg.Tool.Version + " (+https://github.com/capybari/capybari-cli)"
 	}
-	if cfg.Hosted {
+	if cfg.Hosted && !cfg.AllowPrivateNetworks {
 		cfg.DenyPrivateNetworks = true
 	}
 	return &Engine{cfg: cfg}
