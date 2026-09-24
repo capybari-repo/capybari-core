@@ -291,7 +291,7 @@ func (e *Engine) dataBoundary(st *State) report.DataBoundary {
 		}
 		sort.Strings(hs)
 		db.Statement = fmt.Sprintf("Network requests were made to %s by %s.", strings.Join(hs, ", "), strings.Join(ids, ", "))
-		if !db.AIUsed {
+		if !db.AIUsed && st.Target.Kind == analyzer.TargetRepository {
 			db.Statement += " Source files were not uploaded; each disclosure states exactly what was sent."
 		}
 	}
