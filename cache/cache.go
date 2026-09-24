@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/capybari/capybari-core/engine"
+	"github.com/capybari-repo/capybari-core/engine"
 
 	_ "modernc.org/sqlite"
 )

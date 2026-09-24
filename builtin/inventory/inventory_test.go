@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/capybari/capybari-core/analyzertest"
-	"github.com/capybari/capybari-core/builtin/inventory"
-	"github.com/capybari/capybari-core/facts"
+	"github.com/capybari-repo/capybari-core/analyzertest"
+	"github.com/capybari-repo/capybari-core/builtin/inventory"
+	"github.com/capybari-repo/capybari-core/facts"
 )
 
 func write(t *testing.T, root string, files map[string]string) {

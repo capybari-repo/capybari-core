@@ -12,11 +12,11 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/capybari/capybari-core/analyzer"
-	"github.com/capybari/capybari-core/builtin"
-	"github.com/capybari/capybari-core/engine"
-	"github.com/capybari/capybari-core/report"
-	"github.com/capybari/capybari-core/target"
+	"github.com/capybari-repo/capybari-core/analyzer"
+	"github.com/capybari-repo/capybari-core/builtin"
+	"github.com/capybari-repo/capybari-core/engine"
+	"github.com/capybari-repo/capybari-core/report"
+	"github.com/capybari-repo/capybari-core/target"
 )
 
 // Main runs the primary analyzer (plus any analyzers it depends on) against
@@ -37,7 +37,7 @@ func Run(args []string, stdout, stderr io.Writer, version string, primary analyz
 	fs.Usage = func() {
 		fmt.Fprintf(stderr, "capybari-%s %s: %s\n\nUsage: capybari-%s [flags] <folder | archive | repository URL | website URL>\n\n", c.ID, version, c.Summary, c.ID)
 		fs.PrintDefaults()
-		fmt.Fprintf(stderr, "\nThis runs one capability. For the full Software X-Ray use the unified CLI: https://github.com/capybari/capybari-cli\n")
+		fmt.Fprintf(stderr, "\nThis runs one capability. For the full Software X-Ray use the unified CLI: https://github.com/capybari-repo/capybari-cli\n")
 	}
 	// Accept flags before or after the target, like the unified CLI.
 	var pos []string

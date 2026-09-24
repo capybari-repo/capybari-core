@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/capybari/capybari-core/analyzer"
-	"github.com/capybari/capybari-core/finding"
-	"github.com/capybari/capybari-core/netguard"
-	"github.com/capybari/capybari-core/report"
+	"github.com/capybari-repo/capybari-core/analyzer"
+	"github.com/capybari-repo/capybari-core/finding"
+	"github.com/capybari-repo/capybari-core/netguard"
+	"github.com/capybari-repo/capybari-core/report"
 )
 
 // StoredArtifact is an artifact with its content, as kept in scan state.

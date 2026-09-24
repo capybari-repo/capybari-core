@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/capybari/capybari-core/analyzer"
-	"github.com/capybari/capybari-core/engine"
-	"github.com/capybari/capybari-core/finding"
-	"github.com/capybari/capybari-core/report"
+	"github.com/capybari-repo/capybari-core/analyzer"
+	"github.com/capybari-repo/capybari-core/engine"
+	"github.com/capybari-repo/capybari-core/finding"
+	"github.com/capybari-repo/capybari-core/report"
 )
 
 // fake is a configurable test analyzer.

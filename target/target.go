@@ -18,7 +18,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/capybari/capybari-core/analyzer"
+	"github.com/capybari-repo/capybari-core/analyzer"
 )
 
 // Options control resolution.

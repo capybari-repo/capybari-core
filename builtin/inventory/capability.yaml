@@ -15,7 +15,7 @@ execution:
   network: none
   ai: none
 privacy: Runs entirely locally. Nothing leaves the machine.
-methodology: https://github.com/capybari/capybari-docs/blob/main/capabilities/inventory.md
+methodology: https://github.com/capybari-repo/capybari-docs/blob/main/capabilities/inventory.md
 follow_ups:
   - capability: fingerprint
     reason: Turn the inventory into a compact project fingerprint (type, runtimes, entry points).

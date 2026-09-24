@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/capybari/capybari-core/analyzer"
-	"github.com/capybari/capybari-core/fsutil"
+	"github.com/capybari-repo/capybari-core/analyzer"
+	"github.com/capybari-repo/capybari-core/fsutil"
 )
 
 // TargetDigest cheaply fingerprints a repository's current content using

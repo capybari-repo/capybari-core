@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/capybari/capybari-core/finding"
+	"github.com/capybari-repo/capybari-core/finding"
 )
 
 // APIVersion is the Analyzer API major version implemented by this core.

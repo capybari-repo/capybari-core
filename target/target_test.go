@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/capybari/capybari-core/analyzer"
+	"github.com/capybari-repo/capybari-core/analyzer"
 )
 
 func TestResolveKinds(t *testing.T) {

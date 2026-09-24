@@ -1,9 +1,9 @@
-module github.com/capybari/capybari-core
+module github.com/capybari-repo/capybari-core
 
 go 1.27.1
 
 require (
-	github.com/capybari/capybari-schemas v0.0.0
+	github.com/capybari-repo/capybari-schemas v0.0.0
 	golang.org/x/net v0.59.0
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.59.0
@@ -23,4 +23,4 @@ require (
 	modernc.org/memory v1.12.1 // indirect
 )
 
-replace github.com/capybari/capybari-schemas => ../capybari-schemas
+replace github.com/capybari-repo/capybari-schemas => ../capybari-schemas

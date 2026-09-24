@@ -20,8 +20,8 @@ import (
 
 	"golang.org/x/net/html"
 
-	"github.com/capybari/capybari-core/analyzer"
-	"github.com/capybari/capybari-core/facts"
+	"github.com/capybari-repo/capybari-core/analyzer"
+	"github.com/capybari-repo/capybari-core/facts"
 )
 
 //go:embed capability.yaml

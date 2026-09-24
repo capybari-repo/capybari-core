@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/capybari/capybari-core/analyzer"
-	"github.com/capybari/capybari-core/finding"
-	"github.com/capybari/capybari-core/report"
+	"github.com/capybari-repo/capybari-core/analyzer"
+	"github.com/capybari-repo/capybari-core/finding"
+	"github.com/capybari-repo/capybari-core/report"
 )
 
 func sample() *report.Report {

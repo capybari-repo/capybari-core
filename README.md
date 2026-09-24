@@ -2,7 +2,7 @@
 
 **Capybari Source Intelligence: the shared analysis engine.**
 
-`capybari-core` is the foundation every Capybari Source Intelligence capability builds on. It contains no product UI. The [`capybari`](https://github.com/capybari/capybari-cli) CLI, the GitHub Action and the hosted service all run this same engine.
+`capybari-core` is the foundation every Capybari Source Intelligence capability builds on. It contains no product UI. The [`capybari`](https://github.com/capybari-repo/capybari-cli) CLI, the GitHub Action and the hosted service all run this same engine.
 
 | Package | Purpose |
 |---|---|
@@ -43,7 +43,7 @@ func (*Analyzer) Analyze(ctx context.Context, in *analyzer.Input) (*analyzer.Res
 }
 ```
 
-Start new analyzers from [`capybari-analyzer-template`](https://github.com/capybari/capybari-analyzer-template).
+Start new analyzers from [`capybari-analyzer-template`](https://github.com/capybari-repo/capybari-analyzer-template).
 
 ## Development
 

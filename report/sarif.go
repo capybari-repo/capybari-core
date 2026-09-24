@@ -5,7 +5,7 @@ import (
 	"io"
 	"sort"
 
-	"github.com/capybari/capybari-core/finding"
+	"github.com/capybari-repo/capybari-core/finding"
 )
 
 // SARIF 2.1.0 subset sufficient for GitHub code scanning.
@@ -182,7 +182,7 @@ func WriteSARIF(w io.Writer, r *Report) error {
 		Runs: []sarifRun{{
 			Tool: sarifTool{Driver: sarifDriver{
 				Name: "Capybari Source Intelligence", Version: r.Tool.Version,
-				InformationURI: "https://github.com/capybari/capybari-cli", Rules: ruleList,
+				InformationURI: "https://github.com/capybari-repo/capybari-cli", Rules: ruleList,
 			}},
 			Results: results,
 		}},

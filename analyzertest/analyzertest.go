@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/capybari/capybari-core/analyzer"
-	"github.com/capybari/capybari-core/builtin"
-	"github.com/capybari/capybari-core/engine"
-	"github.com/capybari/capybari-core/report"
+	"github.com/capybari-repo/capybari-core/analyzer"
+	"github.com/capybari-repo/capybari-core/builtin"
+	"github.com/capybari-repo/capybari-core/engine"
+	"github.com/capybari-repo/capybari-core/report"
 )
 
 var update = flag.Bool("update", false, "rewrite golden files")

@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/capybari/capybari-core/engine"
-	"github.com/capybari/capybari-core/report"
+	"github.com/capybari-repo/capybari-core/engine"
+	"github.com/capybari-repo/capybari-core/report"
 )
 
 func TestRoundTrip(t *testing.T) {

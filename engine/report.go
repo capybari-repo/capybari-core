@@ -8,14 +8,14 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/capybari/capybari-core/analyzer"
-	"github.com/capybari/capybari-core/facts"
-	"github.com/capybari/capybari-core/finding"
-	"github.com/capybari/capybari-core/report"
+	"github.com/capybari-repo/capybari-core/analyzer"
+	"github.com/capybari-repo/capybari-core/facts"
+	"github.com/capybari-repo/capybari-core/finding"
+	"github.com/capybari-repo/capybari-core/report"
 )
 
 // MethodologyBase is where scoring methodology is published.
-const MethodologyBase = "https://github.com/capybari/capybari-docs/blob/main/methodology/scoring.md"
+const MethodologyBase = "https://github.com/capybari-repo/capybari-docs/blob/main/methodology/scoring.md"
 
 // Severity penalty points used by score aggregation. Documented in
 // capybari-docs/methodology/scoring.md; changing them is a methodology change.

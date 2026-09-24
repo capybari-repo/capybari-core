@@ -5,9 +5,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/capybari/capybari-core/analyzertest"
-	"github.com/capybari/capybari-core/builtin/websnapshot"
-	"github.com/capybari/capybari-core/facts"
+	"github.com/capybari-repo/capybari-core/analyzertest"
+	"github.com/capybari-repo/capybari-core/builtin/websnapshot"
+	"github.com/capybari-repo/capybari-core/facts"
 )
 
 func TestSnapshot(t *testing.T) {

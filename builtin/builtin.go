@@ -4,9 +4,9 @@
 package builtin
 
 import (
-	"github.com/capybari/capybari-core/analyzer"
-	"github.com/capybari/capybari-core/builtin/inventory"
-	"github.com/capybari/capybari-core/builtin/websnapshot"
+	"github.com/capybari-repo/capybari-core/analyzer"
+	"github.com/capybari-repo/capybari-core/builtin/inventory"
+	"github.com/capybari-repo/capybari-core/builtin/websnapshot"
 )
 
 // All returns the built-in capabilities.

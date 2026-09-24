@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/capybari/capybari-core/analyzer"
+	"github.com/capybari-repo/capybari-core/analyzer"
 )
 
 // Registry is the formal capability registry (Unified Agent, Section 9).

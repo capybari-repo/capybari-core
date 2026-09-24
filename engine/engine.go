@@ -15,10 +15,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/capybari/capybari-core/analyzer"
-	"github.com/capybari/capybari-core/finding"
-	"github.com/capybari/capybari-core/netguard"
-	"github.com/capybari/capybari-core/report"
+	"github.com/capybari-repo/capybari-core/analyzer"
+	"github.com/capybari-repo/capybari-core/finding"
+	"github.com/capybari-repo/capybari-core/netguard"
+	"github.com/capybari-repo/capybari-core/report"
 )
 
 // Cache stores capability results keyed by capability version, target
@@ -97,7 +97,7 @@ func New(cfg Config) *Engine {
 		cfg.Now = time.Now
 	}
 	if cfg.UserAgent == "" {
-		cfg.UserAgent = "capybari-source-intelligence/" + cfg.Tool.Version + " (+https://github.com/capybari/capybari-cli)"
+		cfg.UserAgent = "capybari-source-intelligence/" + cfg.Tool.Version + " (+https://github.com/capybari-repo/capybari-cli)"
 	}
 	if cfg.Hosted && !cfg.AllowPrivateNetworks {
 		cfg.DenyPrivateNetworks = true
