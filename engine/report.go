@@ -29,7 +29,7 @@ const scoreHalfPoint = 40.0
 var dimensionNames = map[string]string{
 	finding.DimIdentity:        "Identity",
 	finding.DimStructure:       "Structure",
-	finding.DimDependencies:    "Dependency Health",
+	finding.DimDependencies:    "Dependency Hygiene",
 	finding.DimSecurity:        "Security",
 	finding.DimChangeRisk:      "Change Safety",
 	finding.DimMaintainability: "Maintainability",
@@ -159,7 +159,10 @@ func (e *Engine) scores(st *State, fs []finding.Finding) []report.Score {
 		var dimFindings []finding.Finding
 		capOf := 100.0
 		for _, f := range fs {
-			if f.Dimension != d || !slices.Contains(di.ran, f.Source.Capability) {
+			// Every finding in the dimension counts, whichever capability
+			// produced it; declared scores only decide whether the
+			// dimension was assessed at all.
+			if f.Dimension != d {
 				continue
 			}
 			dimFindings = append(dimFindings, f)
