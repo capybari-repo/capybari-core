@@ -318,6 +318,9 @@ func (e *Engine) runOne(ctx context.Context, st *State, a analyzer.Analyzer, rec
 	}
 	for _, key := range c.Requires {
 		if !st.Has(key) {
+			if e.providersNotApplicable(st, key) {
+				return finish(report.StatusNotApplicable, fmt.Sprintf("no %s to analyse", key))
+			}
 			return finish(report.StatusSkipped, fmt.Sprintf("needs %q evidence, which no earlier capability produced", key))
 		}
 	}
@@ -348,7 +351,7 @@ func (e *Engine) runOne(ctx context.Context, st *State, a analyzer.Analyzer, rec
 
 	if ap, ok := a.(analyzer.Applicable); ok {
 		if ok, reason := ap.Applies(in); !ok {
-			return finish(report.StatusSkipped, reason)
+			return finish(report.StatusNotApplicable, reason)
 		}
 	}
 
@@ -400,6 +403,22 @@ func (e *Engine) runOne(ctx context.Context, st *State, a analyzer.Analyzer, rec
 		}
 	}
 	return finish(report.StatusOK, "")
+}
+
+// providersNotApplicable reports whether every capability that could have
+// provided key ran and found nothing to analyse.
+func (e *Engine) providersNotApplicable(st *State, key string) bool {
+	ids := e.cfg.Registry.providers(key, st.Target.Kind)
+	if len(ids) == 0 {
+		return false
+	}
+	for _, id := range ids {
+		rec, ok := st.run(id)
+		if !ok || rec.Run.Status != report.StatusNotApplicable {
+			return false
+		}
+	}
+	return true
 }
 
 func (e *Engine) invoke(ctx context.Context, a analyzer.Analyzer, in *analyzer.Input) (res *analyzer.Result, err error) {

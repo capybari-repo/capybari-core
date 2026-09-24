@@ -145,7 +145,7 @@ func (e *Engine) scores(st *State, fs []finding.Finding) []report.Score {
 			if ran && rec.Run.Status == report.StatusOK {
 				di.ran = append(di.ran, c.ID)
 				di.experimental = di.experimental || c.Experimental()
-			} else if ran {
+			} else if ran && rec.Run.Status != report.StatusNotApplicable {
 				di.missing = append(di.missing, c.ID)
 			}
 		}

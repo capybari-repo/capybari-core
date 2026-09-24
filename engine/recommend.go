@@ -78,7 +78,9 @@ func (e *Engine) recommend(st *State, fs []finding.Finding) []report.Recommendat
 			if !ok || !target.Capability().Supports(st.Target.Kind) {
 				continue
 			}
-			if prev, ran := st.Runs[fu.Capability]; ran && prev.Run.Status == report.StatusOK {
+			// Anything that already ran (or was offline-skipped, handled
+			// below) is not recommended again.
+			if _, ran := st.Runs[fu.Capability]; ran {
 				continue
 			}
 			ok, why := matches(fu.When)

@@ -42,7 +42,12 @@ type Scan struct {
 
 // Run statuses.
 const (
-	StatusOK      = "ok"
+	StatusOK = "ok"
+	// StatusNotApplicable: nothing for the capability to analyse on this
+	// target (e.g. no lockfiles). It does not lower score confidence.
+	StatusNotApplicable = "not-applicable"
+	// StatusSkipped: the capability could have produced results but did not
+	// run (offline, no AI provider, an upstream capability failed).
 	StatusSkipped = "skipped"
 	StatusFailed  = "failed"
 )

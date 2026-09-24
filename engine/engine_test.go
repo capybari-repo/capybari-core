@@ -152,7 +152,7 @@ func TestRunStatusesAndEvidenceFlow(t *testing.T) {
 	if seen != 42 {
 		t.Fatalf("consumer saw %d", seen)
 	}
-	want := map[string]string{"prod": "ok", "cons": "ok", "boom": "failed", "fail": "failed", "netcap": "skipped", "orphan": "skipped", "declines": "skipped"}
+	want := map[string]string{"prod": "ok", "cons": "ok", "boom": "failed", "fail": "failed", "netcap": "skipped", "orphan": "skipped", "declines": "not-applicable"}
 	for id, status := range want {
 		run, ok := r.Capability(id)
 		if !ok || run.Status != status {
