@@ -39,17 +39,26 @@ func Run(args []string, stdout, stderr io.Writer, version string, primary analyz
 		fs.PrintDefaults()
 		fmt.Fprintf(stderr, "\nThis runs one capability. For the full Software X-Ray use the unified CLI: https://github.com/capybari/capybari-cli\n")
 	}
-	if err := fs.Parse(args); err != nil {
-		return 2
+	// Accept flags before or after the target, like the unified CLI.
+	var pos []string
+	for {
+		if err := fs.Parse(args); err != nil {
+			return 2
+		}
+		if fs.NArg() == 0 {
+			break
+		}
+		pos = append(pos, fs.Arg(0))
+		args = fs.Args()[1:]
 	}
-	if fs.NArg() != 1 {
+	if len(pos) != 1 {
 		fs.Usage()
 		return 2
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	res, err := target.Resolve(ctx, fs.Arg(0), target.Options{As: analyzer.TargetKind(*as), AllowClone: true})
+	res, err := target.Resolve(ctx, pos[0], target.Options{As: analyzer.TargetKind(*as), AllowClone: true})
 	if err != nil {
 		fmt.Fprintln(stderr, "error:", err)
 		return 1
