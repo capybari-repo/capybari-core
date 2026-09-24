@@ -1,0 +1,82 @@
+# End-of-life data for runtimes and frameworks, bundled so EOL detection
+# works offline. Source: https://endoflife.date (verify before changing).
+# A release line is EOL when `eol` is a past date; "unsupported" means the
+# maintainers no longer support it and publish no date.
+as_of: "2026-09-23"
+products:
+  Node.js:
+    source: https://endoflife.date/nodejs
+    kind: runtime
+    cycles: {"8": "2019-12-31", "10": "2021-04-30", "11": "2019-06-01", "12": "2022-04-30", "13": "2020-06-01", "14": "2023-04-30", "15": "2021-06-01", "16": "2023-09-11", "17": "2022-06-01", "18": "2025-04-30", "19": "2023-06-01", "20": "2026-04-30", "21": "2024-06-01", "22": "2027-04-30", "23": "2025-06-01", "24": "2028-04-30"}
+  Python:
+    source: https://endoflife.date/python
+    kind: runtime
+    cycles: {"2.7": "2020-01-01", "3.5": "2020-09-13", "3.6": "2021-12-23", "3.7": "2023-06-27", "3.8": "2024-10-07", "3.9": "2025-10-31", "3.10": "2026-10-31", "3.11": "2027-10-31", "3.12": "2028-10-31", "3.13": "2029-10-31"}
+  Go:
+    source: https://endoflife.date/go
+    kind: runtime
+    note: Each Go release is supported until two newer major releases exist.
+    cycles: {"1.16": "2022-03-15", "1.17": "2022-08-02", "1.18": "2023-02-01", "1.19": "2023-08-08", "1.20": "2024-02-06", "1.21": "2024-08-13", "1.22": "2025-02-11", "1.23": "2025-08-12", "1.24": "2026-02-10", "1.25": "2026-08-11"}
+  Ruby:
+    source: https://endoflife.date/ruby
+    kind: runtime
+    cycles: {"2.5": "2021-04-05", "2.6": "2022-04-12", "2.7": "2023-03-31", "3.0": "2024-04-23", "3.1": "2025-03-26", "3.2": "2026-03-31", "3.3": "2027-03-31"}
+  PHP:
+    source: https://endoflife.date/php
+    kind: runtime
+    cycles: {"5.6": "2018-12-31", "7.0": "2019-01-10", "7.1": "2019-12-01", "7.2": "2020-11-30", "7.3": "2021-12-06", "7.4": "2022-11-28", "8.0": "2023-11-26", "8.1": "2025-12-31", "8.2": "2026-12-31", "8.3": "2027-12-31"}
+  .NET:
+    source: https://endoflife.date/dotnet
+    kind: runtime
+    cycles: {"netcoreapp2.1": "2021-08-21", "netcoreapp3.1": "2022-12-13", "net5.0": "2022-05-10", "net6.0": "2024-11-12", "net7.0": "2024-05-14", "net8.0": "2026-11-10", "net9.0": "2026-11-10"}
+  Django:
+    source: https://endoflife.date/django
+    kind: framework
+    cycles: {"1.11": "2020-04-01", "2.2": "2022-04-11", "3.0": "2021-04-06", "3.1": "2021-12-07", "3.2": "2024-04-01", "4.0": "2023-04-01", "4.1": "2023-12-01", "4.2": "2026-04-30", "5.0": "2025-04-02", "5.1": "2025-12-31"}
+  Flask:
+    source: https://flask.palletsprojects.com/en/stable/changes/
+    kind: framework
+    note: Pallets supports only the latest feature release.
+    cycles: {"0.12": "unsupported", "1.0": "unsupported", "1.1": "unsupported", "2.0": "unsupported", "2.1": "unsupported", "2.2": "unsupported"}
+  Ruby on Rails:
+    source: https://endoflife.date/rails
+    kind: framework
+    cycles: {"5.2": "2022-06-01", "6.0": "2023-06-01", "6.1": "2024-10-01", "7.0": "2025-04-01", "7.1": "2025-10-01", "7.2": "2026-08-09"}
+  Laravel:
+    source: https://endoflife.date/laravel
+    kind: framework
+    cycles: {"6": "2022-09-06", "7": "2021-03-03", "8": "2023-01-24", "9": "2024-02-06", "10": "2025-02-04", "11": "2026-03-12"}
+  Angular:
+    source: https://endoflife.date/angular
+    kind: framework
+    cycles: {"12": "2022-11-12", "13": "2023-05-04", "14": "2023-11-18", "15": "2024-05-18", "16": "2024-11-08", "17": "2025-05-15", "18": "2025-11-21", "19": "2026-05-19"}
+  AngularJS:
+    source: https://endoflife.date/angularjs
+    kind: framework
+    cycles: {"1": "2021-12-31"}
+  Vue.js:
+    source: https://endoflife.date/vue
+    kind: framework
+    cycles: {"2": "2023-12-31"}
+  jQuery:
+    source: https://endoflife.date/jquery
+    kind: library
+    cycles: {"1": "unsupported", "2": "unsupported"}
+  Moment.js:
+    source: https://momentjs.com/docs/#/-project-status/
+    kind: library
+    note: Moment.js is in maintenance mode; the maintainers recommend alternatives for new work.
+    cycles: {}
+  Express:
+    source: https://expressjs.com/en/support/
+    kind: framework
+    cycles: {"3": "2015-07-31"}
+  WordPress:
+    source: https://endoflife.date/wordpress
+    kind: framework
+    note: WordPress provides security fixes only for recent branches; older branches receive no guaranteed updates.
+    cycles: {"3": "unsupported", "4": "unsupported", "5": "unsupported"}
+  Bootstrap:
+    source: https://endoflife.date/bootstrap
+    kind: library
+    cycles: {"2": "2013-08-19", "3": "2019-07-24", "4": "2023-01-01"}
