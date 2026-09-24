@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Software X-Ray: {{.Scan.Target.Display}}</title>
+<style>
+:root{--bg:#fbfaf9;--card:#ffffff;--ink:#121110;--ink2:#4c4640;--muted:#837c74;--line:#e3e0db;--accent:#0b8168;--accent-bg:#eafbf5;
+--crit:#b42318;--high:#bc591d;--med:#a16207;--low:#4f6f94;--info:#837c74;--good:#0b8168;--fair:#a16207;--poor:#b42318;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0a0908;--card:#171512;--ink:#f6f4f1;--ink2:#c4bdb4;--muted:#968f86;--line:#34302b;--accent:#35c09a;--accent-bg:rgba(53,192,154,.12);
+--crit:#f97066;--high:#edaa6b;--med:#facc15;--low:#8fb3dc;--info:#968f86;--good:#35c09a;--fair:#facc15;--poor:#f97066;color-scheme:dark}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 InterVariable,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1080px;margin:0 auto;padding:32px 16px 64px}a{color:var(--accent)}code,pre{font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+header .kicker{color:var(--accent);font-weight:600;letter-spacing:.04em;text-transform:uppercase;font-size:12px}
+h1{font-size:28px;margin:4px 0 8px;overflow-wrap:anywhere}h2{font-size:19px;margin:36px 0 12px}h3{font-size:15px;margin:0 0 6px}
+.headline{font-size:17px;color:var(--ink2);margin:0 0 12px}.meta{color:var(--muted);font-size:13px}.meta span{margin-right:14px;display:inline-block}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+a.score{display:block;text-decoration:none;color:inherit}a.score:hover{border-color:var(--accent)}
+.score .v{font-size:34px;font-weight:700;line-height:1.1}.score .n{font-weight:600}.score .s{color:var(--muted);font-size:12.5px;margin-top:6px}
+.bar{height:6px;background:var(--line);border-radius:3px;margin:8px 0 4px;overflow:hidden}.bar i{display:block;height:100%}
+.good{color:var(--good)}.fair{color:var(--fair)}.poor{color:var(--poor)}.bg-good{background:var(--good)}.bg-fair{background:var(--fair)}.bg-poor{background:var(--poor)}
+dl.facts{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:0}dl.facts dt{color:var(--muted)}dl.facts dd{margin:0;overflow-wrap:anywhere}
+.chips span{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:1px 9px;margin:2px 4px 2px 0;font-size:13px}
+.counts span{margin-right:12px;font-weight:600}
+.sev{display:inline-block;min-width:68px;text-align:center;border-radius:6px;padding:1px 6px;font-size:12px;font-weight:700;text-transform:uppercase;color:#fff}
+.sev-critical{background:var(--crit)}.sev-high{background:var(--high)}.sev-medium{background:var(--med)}.sev-low{background:var(--low)}.sev-info{background:var(--info)}
+details.f{background:var(--card);border:1px solid var(--line);border-radius:10px;margin:8px 0;padding:10px 14px}
+details.f summary{cursor:pointer;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;list-style:none}details.f summary::-webkit-details-marker{display:none}
+details.f summary .t{font-weight:600;flex:1 1 300px}details.f summary .c{color:var(--muted);font-size:12.5px}
+.body{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}.body p{margin:6px 0}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;overflow:auto;white-space:pre-wrap;word-break:break-all;margin:4px 0 8px}
+.new{color:var(--accent);font-weight:700;font-size:12px}
+ol.recs{padding-left:20px}ol.recs li{margin:6px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted);font-weight:600}
+.tablewrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px}
+.muted{color:var(--muted)}.pill{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:0 7px;color:var(--muted)}
+.boundary{border-left:4px solid var(--accent);background:var(--accent-bg)}
+footer{margin-top:48px;color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body><main>
+<header>
+<div class="kicker">Capybari Source Intelligence · Software X-Ray</div>
+<h1>{{.Scan.Target.Display}}</h1>
+<p class="headline">{{.Summary.Headline}}</p>
+<div class="meta"><span>{{.Scan.Target.Kind}} · <code>{{.Scan.Target.Input}}</code></span><span>{{.Scan.FinishedAt.Format "2006-01-02 15:04 MST"}}</span><span>{{seconds .Scan.DurationMS}}</span><span>{{if .Scan.Mode.Offline}}offline{{else}}online{{end}}{{if .Scan.Mode.Active}} · active probes{{end}}</span><span>{{.Tool.Name}} {{.Tool.Version}}</span></div>
+</header>
+
+{{if .Scores}}
+<h2>Scores <span class="pill">0 = worst · 100 = best</span></h2>
+<div class="grid">
+{{range .Scores}}<a class="card score" href="#dim-{{.ID}}" title="{{.Summary}}">
+<div class="n">{{.Name}}</div><div class="v {{.Rating}}">{{.Value}}<span class="muted" style="font-size:15px">/100</span></div>
+<div class="bar"><i class="bg-{{.Rating}}" style="width:{{.Value}}%"></i></div>
+<div class="s">{{.Rating}} · {{.Confidence}} confidence</div><div class="s">{{.Summary}}</div></a>
+{{end}}
+</div>
+{{end}}
+
+<h2>What is it?</h2>
+<div class="card"><dl class="facts">
+{{with .Fingerprint}}
+<dt>Project type</dt><dd>{{join .ProjectTypes ", "}}</dd>
+{{if .PrimaryLanguage}}<dt>Primary language</dt><dd>{{.PrimaryLanguage}}</dd>{{end}}
+{{if .PackageManagers}}<dt>Package managers</dt><dd>{{join .PackageManagers ", "}}</dd>{{end}}
+{{if .Runtimes}}<dt>Runtimes</dt><dd>{{range .Runtimes}}{{.Name}}{{if .Version}} {{.Version}}{{end}}; {{end}}</dd>{{end}}
+{{if .EntryPoints}}<dt>Entry points</dt><dd>{{range .EntryPoints}}<code>{{.}}</code> {{end}}</dd>{{end}}
+<dt>Tests · CI · Containers</dt><dd>{{if .HasTests}}yes{{else}}no{{end}} · {{if .HasCI}}{{join .HasCI ", "}}{{else}}none{{end}} · {{if .HasContainers}}yes{{else}}no{{end}}</dd>
+{{with .Git}}<dt>History</dt><dd>{{.Commits}} commits · {{.Contributors}} contributors{{if not .LastCommit.IsZero}} · last {{.LastCommit.Format "2006-01-02"}}{{end}}{{if .Shallow}} <span class="pill">shallow clone</span>{{end}}</dd>{{end}}
+<dt>Size · Fingerprint</dt><dd>{{.Size}} · <code>{{.Digest}}</code></dd>
+{{end}}
+{{with .Inventory}}<dt>Files</dt><dd>{{.TotalFiles}} files · {{.TotalLines}} lines</dd>
+<dt>Languages</dt><dd class="chips">{{range .Languages}}<span>{{.Language}} {{pct .Share}}</span>{{end}}</dd>{{end}}
+{{with .Web}}<dt>URL</dt><dd><code>{{.RequestedURL}}</code> → <code>{{.FinalURL}}</code> (HTTP {{.Status}})</dd>{{if .Title}}<dt>Title</dt><dd>{{.Title}}</dd>{{end}}
+{{with .TLS}}<dt>TLS</dt><dd>{{.Version}}{{if .Issuer}} · issued by {{.Issuer}}{{end}}{{if not .NotAfter.IsZero}} · expires {{.NotAfter.Format "2006-01-02"}}{{end}}</dd>{{end}}{{end}}
+{{with .Technologies}}<dt>Technologies</dt><dd class="chips">{{range .Items}}<span title="{{.Category}}">{{.Name}}{{if .Version}} {{.Version}}{{end}}</span>{{end}}</dd>{{end}}
+{{with .Dependencies}}<dt>Dependencies</dt><dd>{{len .Packages}} packages from {{len .Manifests}} manifest(s){{if $.DirectDeps}} · {{$.DirectDeps}} direct{{end}}</dd>{{end}}
+{{with .Architecture}}<dt>Architecture</dt><dd>{{len .Nodes}} modules · {{len .Edges}} dependencies{{if .Cycles}} · <strong class="poor">{{len .Cycles}} cycle(s)</strong>{{end}}</dd>{{end}}
+</dl></div>
+
+<h2>Findings</h2>
+<p class="counts"><span class="poor">{{sevcount .Summary.Counts "critical"}} critical</span><span style="color:var(--high)">{{sevcount .Summary.Counts "high"}} high</span><span class="fair">{{sevcount .Summary.Counts "medium"}} medium</span><span style="color:var(--low)">{{sevcount .Summary.Counts "low"}} low</span><span class="muted">{{sevcount .Summary.Counts "info"}} info</span></p>
+{{if not .Findings}}<div class="card">No findings.</div>{{end}}
+{{range $i, $f := .Findings}}
+<details class="f" id="f-{{$f.ID}}"{{if lt $i 3}} open{{end}}><summary><span class="sev sev-{{$f.Severity}}">{{$f.Severity}}</span><span class="t">{{if eq $f.BaselineState "new"}}<span class="new">NEW </span>{{end}}{{$f.Title}}</span><span class="c"{{with index $.DimAnchor $f.ID}} id="dim-{{.}}"{{end}}>{{$f.Dimension}} · {{$f.Confidence}} confidence · {{$f.Source.Capability}}</span></summary>
+<div class="body">
+{{if $f.Description}}<p>{{$f.Description}}</p>{{end}}
+{{range $j, $e := $f.Evidence}}{{if lt $j 8}}<p><code>{{loc $e}}</code>{{if $e.Detail}} — {{$e.Detail}}{{end}}</p>{{if $e.Snippet}}<pre>{{$e.Snippet}}</pre>{{end}}{{end}}{{end}}
+{{if gt (len $f.Evidence) 8}}<p class="muted">…and {{len $f.Evidence}} locations in total.</p>{{end}}
+{{with $f.Impact}}{{if .Technical}}<p><strong>Impact:</strong> {{.Technical}}{{if .Business}} {{.Business}}{{end}}</p>{{end}}{{end}}
+{{with $f.Remediation}}<p><strong>What to do:</strong> {{.Summary}}{{range .References}} <a href="{{.}}" rel="noopener">reference</a>{{end}}</p>{{end}}
+{{with $f.Rule}}<p class="muted">Rule <code>{{.ID}}</code>{{range .References}} · <a href="{{.}}" rel="noopener">{{.}}</a>{{end}}</p>{{end}}
+{{if $f.FalsePositiveGuidance}}<p class="muted">False positive? {{$f.FalsePositiveGuidance}}</p>{{end}}
+<p class="muted">ID <code>{{$f.ID}}</code>{{if $f.Source.Engine}} · engine {{$f.Source.Engine}}{{end}}</p>
+</div></details>
+{{end}}
+
+{{if .Recommendations}}
+<h2>What else can we tell you?</h2>
+<div class="card"><ol class="recs">{{range top 5 .Recommendations}}<li><strong>{{.Title}}</strong>: {{.Reason}}{{if and .Capability .Runnable}} <code>capybari analyze &lt;target&gt; --only {{.Capability}}</code>{{end}}</li>{{end}}</ol></div>
+{{end}}
+
+<h2>Capabilities</h2>
+<div class="tablewrap"><table><thead><tr><th>Capability</th><th>Status</th><th>Findings</th><th>Time</th><th>Network</th><th>Notes</th></tr></thead><tbody>
+{{range .Capabilities}}<tr><td>{{.Name}}{{if .Experimental}} <span class="pill">experimental</span>{{end}}<br><code class="muted">{{.ID}}@{{.Version}}</code></td><td>{{.Status}}{{if .Cached}} <span class="pill">cached</span>{{end}}</td><td>{{.Findings}}</td><td>{{.DurationMS}}ms</td><td>{{.Execution.Network}}</td><td>{{if .Reason}}{{.Reason}}{{else}}{{.Summary}}{{end}}{{range .Engines}}<br><span class="muted">engine: {{.Name}} ({{.License}})</span>{{end}}</td></tr>
+{{end}}</tbody></table></div>
+
+<h2>Data boundary</h2>
+<div class="card boundary"><p>{{.DataBoundary.Statement}}</p>
+{{range .DataBoundary.Calls}}<p><code>{{.Capability}}</code> → {{.Method}} {{.Host}} ×{{.Count}}{{if .Blocked}} ({{.Blocked}} blocked){{end}}</p>{{end}}
+{{range .DataBoundary.Disclosures}}<p><strong>{{.Capability}}:</strong> {{.Statement}}</p>{{end}}</div>
+
+{{if .Limitations}}<h2>Limitations</h2><ul>{{range .Limitations}}<li>{{.}}</li>{{end}}</ul>{{end}}
+
+<footer>Generated by {{.Tool.Name}} {{.Tool.Version}} · scan <code>{{.Scan.ID}}</code> · Report schema {{.SchemaVersion}} · Evidence before opinion: every finding lists its source, confidence and location.</footer>
+</main></body></html>

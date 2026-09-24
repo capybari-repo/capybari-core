@@ -1,0 +1,50 @@
+# Reusable CI for every capybari-analyzer-* repository.
+# Usage (in an analyzer repo's .github/workflows/ci.yml):
+#   jobs:
+#     ci:
+#       uses: capybari/capybari-core/.github/workflows/analyzer-ci.yml@main
+#       with:
+#         siblings: "capybari-analyzer-dependencies"   # optional extra repos needed by cmd/
+name: analyzer-ci
+on:
+  workflow_call:
+    inputs:
+      siblings:
+        description: Space-separated capybari repositories to check out next to this one (pre-release replace directives).
+        type: string
+        default: ""
+      go-version:
+        type: string
+        default: "1.27.x"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: self }
+      - uses: actions/checkout@v4
+        with: { repository: capybari/capybari-core, path: capybari-core }
+      - uses: actions/checkout@v4
+        with: { repository: capybari/capybari-schemas, path: capybari-schemas }
+      - name: Check out sibling repositories
+        if: inputs.siblings != ''
+        run: |
+          for r in ${{ inputs.siblings }}; do
+            git clone --depth 1 "https://github.com/capybari/$r.git" "$r"
+          done
+      - uses: actions/setup-go@v5
+        with: { go-version: "${{ inputs.go-version }}", cache-dependency-path: self/go.sum }
+      - name: Vet
+        working-directory: self
+        run: go vet ./...
+      - name: Test
+        working-directory: self
+        run: go test -race ./...
+      - name: Validate capability.yaml
+        working-directory: self
+        run: go test -run TestCapabilityMetadata ./...
+      - name: License check
+        working-directory: self
+        run: |
+          test -f LICENSE
+          go run github.com/google/go-licenses@v1.6.0 check ./... --disallowed_types=forbidden,restricted

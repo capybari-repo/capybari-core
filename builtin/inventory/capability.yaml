@@ -1,0 +1,21 @@
+id: inventory
+name: Repository Inventory
+version: 0.1.0
+category: discovery
+summary: Enumerates source, tests, configuration, docs, CI/CD, infrastructure-as-code, containers and generated or vendored files, with languages and line counts.
+stability: stable
+core_api: v0
+targets: [repository]
+provides: [inventory]
+findings: [repository-hygiene]
+scores: []
+cost: low
+execution:
+  local: true
+  network: none
+  ai: none
+privacy: Runs entirely locally. Nothing leaves the machine.
+methodology: https://github.com/capybari/capybari-docs/blob/main/capabilities/inventory.md
+follow_ups:
+  - capability: fingerprint
+    reason: Turn the inventory into a compact project fingerprint (type, runtimes, entry points).

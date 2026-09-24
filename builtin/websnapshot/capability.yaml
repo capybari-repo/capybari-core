@@ -1,0 +1,24 @@
+id: web-snapshot
+name: Website Snapshot
+version: 0.1.0
+category: website
+summary: Fetches the website's front page once (following redirects) and records headers, TLS, cookies and page structure for other website capabilities.
+stability: stable
+core_api: v0
+targets: [website]
+provides: [web-snapshot]
+cost: low
+execution:
+  local: false
+  network: required
+  ai: none
+  network_hosts: [$target]
+privacy: >-
+  Sends ordinary HTTP GET requests for the site's front page (and the plain-http
+  version of it, to check the HTTPS redirect) to the scanned website only. No
+  source code or personal data is sent.
+follow_ups:
+  - capability: web-tech
+    reason: Identify the technologies behind the site from the snapshot already taken.
+  - capability: web-security
+    reason: Check security headers, TLS and cookies using the snapshot already taken.
