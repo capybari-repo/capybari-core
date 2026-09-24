@@ -28,7 +28,7 @@ dl.facts{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:
 details.f{background:var(--card);border:1px solid var(--line);border-radius:10px;margin:8px 0;padding:10px 14px}
 details.f summary{cursor:pointer;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;list-style:none}details.f summary::-webkit-details-marker{display:none}
 details.f summary .t{font-weight:600;flex:1 1 300px}details.f summary .c{color:var(--muted);font-size:12.5px}
-.body{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}.body p{margin:6px 0}
+.body{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}.body p{margin:6px 0}.body p.desc{white-space:pre-line}
 pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;overflow:auto;white-space:pre-wrap;word-break:break-all;margin:4px 0 8px}
 .new{color:var(--accent);font-weight:700;font-size:12px}
 ol.recs{padding-left:20px}ol.recs li{margin:6px 0}
@@ -85,7 +85,7 @@ footer{margin-top:48px;color:var(--muted);font-size:12.5px}
 {{range $i, $f := .Findings}}
 <details class="f" id="f-{{$f.ID}}"{{if lt $i 3}} open{{end}}><summary><span class="sev sev-{{$f.Severity}}">{{$f.Severity}}</span><span class="t">{{if eq $f.BaselineState "new"}}<span class="new">NEW </span>{{end}}{{$f.Title}}</span><span class="c"{{with index $.DimAnchor $f.ID}} id="dim-{{.}}"{{end}}>{{$f.Dimension}} · {{$f.Confidence}} confidence · {{$f.Source.Capability}}</span></summary>
 <div class="body">
-{{if $f.Description}}<p>{{$f.Description}}</p>{{end}}
+{{if $f.Description}}<p class="desc">{{$f.Description}}</p>{{end}}
 {{range $j, $e := $f.Evidence}}{{if lt $j 8}}<p><code>{{loc $e}}</code>{{if $e.Detail}} — {{$e.Detail}}{{end}}</p>{{if $e.Snippet}}<pre>{{$e.Snippet}}</pre>{{end}}{{end}}{{end}}
 {{if gt (len $f.Evidence) 8}}<p class="muted">…and {{len $f.Evidence}} locations in total.</p>{{end}}
 {{with $f.Impact}}{{if .Technical}}<p><strong>Impact:</strong> {{.Technical}}{{if .Business}} {{.Business}}{{end}}</p>{{end}}{{end}}
