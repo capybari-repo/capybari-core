@@ -141,7 +141,9 @@ func (e *Engine) Plan(kind analyzer.TargetKind, sel Selection) ([][]string, erro
 				return fmt.Errorf("capability %q does not support %s targets", id, kind)
 			}
 			wanted[id] = true
-			for _, key := range c.Requires {
+			// Optional evidence providers are included too: a focused run
+			// should be as good as the same capability in a full scan.
+			for _, key := range append(slices.Clone(c.Requires), c.Optional...) {
 				for _, p := range reg.providers(key, kind) {
 					if err := add(p, append(stack, id)); err != nil {
 						return err
