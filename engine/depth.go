@@ -102,6 +102,7 @@ func (e *Engine) buildDepth(st *State) *report.Score {
 		Counts:       finding.Counts(nil),
 		Capabilities: []string{"ai-signals", "web-snapshot"},
 		Basis:        basis, Components: comps,
+		Caveat:      fmt.Sprintf("Based on %d public page(s) only", d.Pages),
 		Methodology: MethodologyBase + "#build-depth",
 	}
 }

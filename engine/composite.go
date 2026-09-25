@@ -159,10 +159,27 @@ func (e *Engine) aiSlop(st *State, fs []finding.Finding) *report.Score {
 	}
 	sort.Strings(ids)
 	summary := fmt.Sprintf("%s: indicators of unreviewed AI-generated work across %d group(s)", label, len(comps)-len(notAssessed))
+	// Do not let a low number read as "AI-generated but fine": say where the
+	// points come from when none are AI-generation signs.
+	caveat := ""
+	for _, c := range comps {
+		if c.ID == "ai-generation" && c.Assessed && c.Points == 0 {
+			var from []string
+			for _, o := range comps {
+				if o.Points > 0 {
+					from = append(from, strings.ToLower(o.Name))
+				}
+			}
+			summary = "No AI-slop signs found"
+			if len(from) > 0 {
+				caveat = "No AI-slop signs found; the points come from " + strings.Join(from, ", ")
+			}
+		}
+	}
 	return &report.Score{
 		ID: AISlopID, Name: "Unfinished Risk", Value: value, Rating: rating, Label: label,
 		Direction: report.HigherIsWorse, Confidence: conf, Summary: summary, Counts: counts,
-		Capabilities: ids, Basis: basis, Components: comps,
+		Capabilities: ids, Basis: basis, Components: comps, Caveat: caveat,
 		Methodology: MethodologyBase + "#ai-slop",
 	}
 }

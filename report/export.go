@@ -114,7 +114,11 @@ func WriteMarkdown(w io.Writer, r *Report) error {
 			} else if s.Label != "" {
 				rating = s.Label + " (higher = more finished)"
 			}
-			p("| %s | **%d** | %s | %s | %s |\n", s.Name, s.Value, rating, s.Confidence, mdEscape(s.Summary))
+			summary := s.Summary
+			if s.Caveat != "" {
+				summary += " ⚠ " + s.Caveat
+			}
+			p("| %s | **%d** | %s | %s | %s |\n", s.Name, s.Value, rating, s.Confidence, mdEscape(summary))
 		}
 		for _, s := range r.Scores {
 			if len(s.Components) == 0 {

@@ -269,7 +269,7 @@ func TestScoreCapsAndConfidence(t *testing.T) {
 	if s := byID[finding.DimAISignals]; s.Value != 100 || s.Confidence != finding.ConfidenceLow {
 		t.Fatalf("experimental score must be low confidence: %+v", s)
 	}
-	if !strings.Contains(r.Summary.Headline, "critical/high") {
+	if r.Summary.Headline != "fixture: purchase blocker: key." {
 		t.Fatalf("headline = %q", r.Summary.Headline)
 	}
 }

@@ -37,7 +37,10 @@ func axisOf(f finding.Finding) string {
 		return report.AxisTrust
 	case "coming-soon", "pricing-stub", "broken-link", "dead-cta", "missing-docs":
 		return report.AxisFinish
-	case "stale-content", "linked-repo-inactive", "linked-repo-archived", "inactive-repository", "single-maintainer",
+	case "purchase-path-unverified":
+		return report.AxisTrust
+		return report.AxisFinish
+	case "stale-content", "no-ops-trail", "linked-repo-inactive", "linked-repo-archived", "inactive-repository", "single-maintainer",
 		"license-restriction", "unmaintained-dependency", "deprecated-package":
 		return report.AxisRisk
 	}
@@ -172,6 +175,9 @@ func (v *verdictInput) concerns(axis string) (rs []report.VerdictReason, blocks,
 	sort.SliceStable(cs, func(i, j int) bool {
 		if (cs[i].b == finding.BuyerBlocks) != (cs[j].b == finding.BuyerBlocks) {
 			return cs[i].b == finding.BuyerBlocks
+		}
+		if ri, rj := FearRank(cs[i].f.Category), FearRank(cs[j].f.Category); ri != rj {
+			return ri < rj
 		}
 		return cs[i].f.Severity.Rank() > cs[j].f.Severity.Rank()
 	})
@@ -372,6 +378,10 @@ func (v *verdictInput) finish() report.VerdictAxis {
 		a.Label, a.Rating = "Partly finished", "fair"
 	default:
 		a.Label, a.Rating = "Looks shipped", "good"
+		if v.st.Target.Kind == analyzer.TargetWebsite {
+			// Only public pages were read; say so wherever the label goes.
+			a.Label = "Looks shipped (public pages only)"
+		}
 	}
 	return a
 }
@@ -383,9 +393,24 @@ func (v *verdictInput) risk() report.VerdictAxis {
 		return a
 	}
 	rs, blocks, support, worst := v.concerns(report.AxisRisk)
+	// A young domain is a longevity risk in itself: there is no track record.
+	young := false
+	if id := v.identity; id != nil && !id.Registered.IsZero() && v.now.Sub(id.Registered) < 365*24*time.Hour {
+		young = true
+		support++
+		rs = append([]report.VerdictReason{{Text: fmt.Sprintf("Domain only %s old (registered %s, no track record yet)", strings.TrimSuffix(ago(id.Registered, v.now), " ago"), id.Registered.Format("Jan 2006")),
+			Kind: "concern", Impact: finding.BuyerSupportCost, Category: "young-domain"}}, rs...)
+	}
+	thin := v.has("no-ops-trail")
 	var pos []report.VerdictReason
 	if c := v.completeness; c != nil && !c.LatestDate.IsZero() && v.now.Sub(c.LatestDate) < 365*24*time.Hour {
-		pos = append(pos, positive(fmt.Sprintf("Content updated %s (%s)", ago(c.LatestDate, v.now), sourceName(c.LatestDateSource))))
+		if c.LatestDateSource == "sitemap.xml" {
+			// A sitemap date is weak evidence: generators rewrite it on
+			// every deploy.
+			pos = append(pos, positive(fmt.Sprintf("Sitemap updated %s (no dated pages found)", ago(c.LatestDate, v.now))))
+		} else {
+			pos = append(pos, positive(fmt.Sprintf("Content updated %s (%s)", ago(c.LatestDate, v.now), sourceName(c.LatestDateSource))))
+		}
 	}
 	if c := v.completeness; c != nil {
 		for _, r := range c.Repos {
@@ -419,6 +444,12 @@ func (v *verdictInput) risk() report.VerdictAxis {
 	switch {
 	case blocks > 0 || worst.Rank() >= finding.High.Rank():
 		a.Label, a.Rating = "High regret risk", "poor"
+	case young && thin:
+		a.Label, a.Rating = "Young domain · thin ops trail", "fair"
+	case young:
+		a.Label, a.Rating = "Young product risk", "fair"
+	case thin:
+		a.Label, a.Rating = "Thin ops trail", "fair"
 	case support > 0:
 		a.Label, a.Rating = "Some aging risk", "fair"
 	default:

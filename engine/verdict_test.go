@@ -133,3 +133,52 @@ func TestVerdictRepositoryRisk(t *testing.T) {
 		}
 	}
 }
+
+// The Indraft acceptance case: a young, selling site with spoofable email
+// and no ops trail must not read "Low regret risk", and its summary must
+// lead with the buyer's fear, not with security headers.
+func TestVerdictYoungProductWithoutOpsTrail(t *testing.T) {
+	now := time.Date(2026, 9, 25, 0, 0, 0, 0, time.UTC)
+	web := func(c *analyzer.Capability) { c.Targets = []analyzer.TargetKind{analyzer.TargetWebsite} }
+	provides := func(k string) func(*analyzer.Capability) { return func(c *analyzer.Capability) { c.Provides = []string{k} } }
+	find := func(cat, title string, sev finding.Severity, dim string) finding.Finding {
+		return finding.Finding{Category: cat, Title: title, Severity: sev, Confidence: finding.ConfidenceHigh, Dimension: dim}
+	}
+	sec := &fake{c: capOf("web-security", web), run: func(*analyzer.Input) (*analyzer.Result, error) {
+		return &analyzer.Result{Findings: []finding.Finding{find("security-header", "Content-Security-Policy header missing", finding.Medium, finding.DimSecurity),
+			find("security-header", "Strict-Transport-Security (HSTS) header missing", finding.Medium, finding.DimSecurity)}}, nil
+	}}
+	tech := &fake{c: capOf("web-tech", web)}
+	id := &fake{c: capOf("identity", web, provides(facts.KeyIdentity)), run: func(*analyzer.Input) (*analyzer.Result, error) {
+		return &analyzer.Result{Evidence: map[string]any{facts.KeyIdentity: facts.Identity{Domain: "indraft.pub", Registered: time.Date(2025, 10, 1, 0, 0, 0, 0, time.UTC)}},
+			Findings: []finding.Finding{
+				find("domain-new", "Domain only about 3 months old (registered Oct 2025)", finding.Medium, finding.DimTrust),
+				find("email-spoofable", "Email in Indraft's name can be faked (DMARC policy is p=none (monitor only))", finding.Low, finding.DimTrust)}}, nil
+	}}
+	comp := &fake{c: capOf("completeness", web), run: func(*analyzer.Input) (*analyzer.Result, error) {
+		return &analyzer.Result{Findings: []finding.Finding{find("no-ops-trail", "No public ops trail: no changelog, status page or community", finding.Medium, finding.DimEvolution)}}, nil
+	}}
+	target := analyzer.Target{Kind: analyzer.TargetWebsite, Input: "https://indraft.pub", Display: "indraft.pub"}
+	r, _, err := newEngine(t, engine.Config{Now: func() time.Time { return now }}, sec, tech, id, comp).Analyze(context.Background(), target, engine.Selection{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	risk, _ := r.Verdict.Axis(report.AxisRisk)
+	if risk.Rating == "good" || risk.Label != "Young domain · thin ops trail" || !strings.HasPrefix(risk.Reasons[0].Text, "Domain only 3 months old") {
+		t.Fatalf("risk must bite and lead with domain age: %+v", risk)
+	}
+	if !strings.HasPrefix(r.Summary.Headline, "indraft.pub: buyer concern: email in Indraft's name can be faked; domain only about 3 months old.") ||
+		!strings.HasSuffix(r.Summary.Headline, "Owner homework: 2 header and configuration gap(s).") {
+		t.Fatalf("summary: %q", r.Summary.Headline)
+	}
+	for _, id := range r.Summary.TopFindings {
+		for _, f := range r.Findings {
+			if f.ID == id && f.Category == "security-header" {
+				t.Fatal("security headers are owner homework, never top findings")
+			}
+		}
+	}
+	if last := r.Findings[len(r.Findings)-1]; last.Category != "security-header" {
+		t.Fatalf("owner homework is listed last: %+v", last)
+	}
+}

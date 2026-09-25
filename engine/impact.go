@@ -1,6 +1,10 @@
 package engine
 
-import "github.com/capybari-repo/capybari-core/finding"
+import (
+	"sort"
+
+	"github.com/capybari-repo/capybari-core/finding"
+)
 
 // Buyer impact answers "does this change whether I should trust, use or pay
 // for the product?" rather than "how bad is it technically?". A missing
@@ -94,6 +98,47 @@ func BuyerImpact(f finding.Finding) string {
 		return finding.BuyerSupportCost
 	}
 	return finding.BuyerCosmetic
+}
+
+// buyerRank orders impacts for display: blockers, support cost, cosmetic.
+var buyerRank = map[string]int{finding.BuyerBlocks: 0, finding.BuyerSupportCost: 1, finding.BuyerCosmetic: 2}
+
+// fearRank orders categories by how sharply they speak to a buyer (lower
+// comes first). Unlisted categories sit in the middle (30); notes that
+// inform but rarely alarm come last. Reports, summaries and share cards all
+// lead with the same finding because they all use this order.
+var fearRank = map[string]int{
+	"insecure-credentials": 1, "https": 2, "tls": 2, "secret": 3, "committed-env-file": 3, "exposure": 3, "malicious-package": 3,
+	"coming-soon": 4, "missing-legal": 5,
+	"email-spoofable": 10, "placeholder-content": 14, "vulnerable-library": 16, "vulnerability": 16, "unknown-package": 16,
+	"dead-cta": 18, "broken-link": 20, "domain-new": 22, "young-domain": 22, "no-ops-trail": 24, "missing-contact": 26,
+	"inactive-repository": 28, "license-restriction": 29,
+	"brand-mismatch": 40, "missing-docs": 42, "purchase-path-unverified": 45, "stale-content": 46, "single-maintainer": 47,
+	"unmaintained-dependency": 48, "missing-refund": 49, "domain-expiring": 49, "maintenance-signal": 50,
+}
+
+// FearRank returns how early a category should lead for buyers.
+func FearRank(category string) int {
+	if n, ok := fearRank[category]; ok {
+		return n
+	}
+	return 30
+}
+
+// sortForBuyers puts what matters to buyers first: blockers, then support
+// cost, then cosmetic; within each, the sharpest category first, then the
+// usual severity order.
+func sortForBuyers(fs []finding.Finding) {
+	sort.SliceStable(fs, func(i, j int) bool {
+		a, b := buyerRank[fs[i].Impact.Buyer], buyerRank[fs[j].Impact.Buyer]
+		if a != b {
+			return a < b
+		}
+		if a == buyerRank[finding.BuyerCosmetic] {
+			return false
+		}
+		return FearRank(fs[i].Category) < FearRank(fs[j].Category)
+	})
 }
 
 // tagBuyerImpact fills Impact.Buyer on every finding.

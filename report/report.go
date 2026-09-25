@@ -113,6 +113,9 @@ type Score struct {
 	Label string `json:"label,omitempty"`
 	// Components break a composite score down by evidence group.
 	Components []ScoreComponent `json:"components,omitempty"`
+	// Caveat is shown with the value whenever the evidence behind it is
+	// thin, so a high number is never read as a clean bill of health.
+	Caveat string `json:"caveat,omitempty"`
 }
 
 // IsHigherWorse reports whether the score is a meter where 100 is worst.
@@ -161,9 +164,14 @@ type Disclosure struct {
 
 // Summary is the headline view.
 type Summary struct {
+	// Headline speaks to buyers first, then owners, e.g. "Buyer: email in
+	// Indraft's name can be faked; brand-new domain. Owner homework: 6
+	// header and configuration gaps."
 	Headline    string                   `json:"headline"`
 	Counts      map[finding.Severity]int `json:"counts"`
 	TopFindings []string                 `json:"top_findings,omitempty"`
+	// OwnerHomework counts findings that are cosmetic for buyers.
+	OwnerHomework int `json:"owner_homework"`
 }
 
 // Report is the unified Source Intelligence report.

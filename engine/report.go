@@ -93,6 +93,7 @@ func (e *Engine) Report(st *State) *report.Report {
 	}
 
 	tagBuyerImpact(r.Findings)
+	sortForBuyers(r.Findings)
 	r.Scores = e.scores(st, r.Findings)
 	r.Verdict = e.verdict(st, r.Findings, r.Scores)
 	r.Recommendations = e.recommend(st, r.Findings)
@@ -213,6 +214,7 @@ func (e *Engine) scores(st *State, fs []finding.Finding) []report.Score {
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	caveats(st, out)
 	if depth := e.buildDepth(st); depth != nil {
 		out = append([]report.Score{*depth}, out...)
 	}
@@ -243,11 +245,34 @@ func scoreSummary(counts map[finding.Severity]int, ran, missing []string) string
 func summarize(st *State, r *report.Report) report.Summary {
 	counts := finding.Counts(r.Findings)
 	s := report.Summary{Counts: counts}
-	for i, f := range r.Findings {
-		if i == 5 || f.Severity.Rank() < finding.Medium.Rank() {
-			break
+	// Top findings are what matters to a buyer; owner homework (security
+	// headers and the like) never leads, however many there are.
+	var buyer []string
+	for _, f := range r.Findings {
+		if f.Impact != nil && f.Impact.Buyer == finding.BuyerCosmetic {
+			if f.Severity != finding.Info {
+				s.OwnerHomework++
+			}
+			continue
 		}
-		s.TopFindings = append(s.TopFindings, f.ID)
+		if len(s.TopFindings) < 5 {
+			s.TopFindings = append(s.TopFindings, f.ID)
+		}
+		if len(buyer) < 2 {
+			buyer = append(buyer, lowerFirst(report.ShortTitle(f.Title)))
+		}
+	}
+	owner := ""
+	if s.OwnerHomework > 0 {
+		owner = fmt.Sprintf(" Owner homework: %d header and configuration gap(s).", s.OwnerHomework)
+	}
+	if len(buyer) > 0 {
+		lead := "buyer concern"
+		if f := r.Findings[0]; f.Impact != nil && f.Impact.Buyer == finding.BuyerBlocks {
+			lead = "purchase blocker"
+		}
+		s.Headline = fmt.Sprintf("%s: %s: %s.%s", st.Target.Display, lead, strings.Join(buyer, "; "), owner)
+		return s
 	}
 	ok := 0
 	for _, c := range r.Capabilities {
@@ -255,25 +280,19 @@ func summarize(st *State, r *report.Report) report.Summary {
 			ok++
 		}
 	}
-	serious := counts[finding.Critical] + counts[finding.High]
-	switch {
-	case serious > 0:
-		dims := map[string]bool{}
-		for _, f := range r.Findings {
-			if f.Severity.Rank() >= finding.High.Rank() {
-				dims[DimensionName(f.Dimension)] = true
-			}
-		}
-		names := make([]string, 0, len(dims))
-		for d := range dims {
-			names = append(names, d)
-		}
-		sort.Strings(names)
-		s.Headline = fmt.Sprintf("%s: %d critical/high finding(s) in %s. Start there.", st.Target.Display, serious, strings.Join(names, ", "))
-	case counts[finding.Medium] > 0:
-		s.Headline = fmt.Sprintf("%s: no critical or high findings; %d medium finding(s) worth reviewing.", st.Target.Display, counts[finding.Medium])
-	default:
-		s.Headline = fmt.Sprintf("%s: no significant issues found by %d capabilities.", st.Target.Display, ok)
+	if s.OwnerHomework > 0 {
+		s.Headline = fmt.Sprintf("%s: no buyer concerns found by %d capabilities.%s", st.Target.Display, ok, owner)
+		return s
+	}
+	s.Headline = fmt.Sprintf("%s: no significant issues found by %d capabilities.", st.Target.Display, ok)
+	return s
+}
+
+// lowerFirst lowercases an ordinary first word ("Email in…" → "email
+// in…") but keeps acronyms and names ("HTTPS", "jQuery") as they are.
+func lowerFirst(s string) string {
+	if len(s) > 1 && s[0] >= 'A' && s[0] <= 'Z' && s[1] >= 'a' && s[1] <= 'z' {
+		return strings.ToLower(s[:1]) + s[1:]
 	}
 	return s
 }
@@ -323,4 +342,29 @@ func (e *Engine) dataBoundary(st *State) report.DataBoundary {
 		}
 	}
 	return db
+}
+
+// caveats stamps scores whose evidence is thin, so that a high number with
+// little behind it is never shown bare.
+func caveats(st *State, scores []report.Score) {
+	for i := range scores {
+		sc := &scores[i]
+		if sc.ID == finding.DimEvolution && st.Target.Kind == analyzer.TargetWebsite {
+			if t := fact[facts.Technologies](st, facts.KeyTechnologies); t != nil {
+				high := 0
+				for _, it := range t.Items {
+					if it.Confidence == "high" {
+						high++
+					}
+				}
+				if high < 3 {
+					sc.Caveat = fmt.Sprintf("Limited fingerprint: only %d technolog%s identified with confidence", high, map[bool]string{true: "y", false: "ies"}[high == 1])
+					sc.Confidence = finding.ConfidenceLow
+				}
+			}
+		}
+		if sc.Caveat == "" && sc.Value >= 90 && sc.Confidence == finding.ConfidenceLow {
+			sc.Caveat = "Low confidence: limited evidence behind this score"
+		}
+	}
 }

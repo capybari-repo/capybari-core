@@ -33,6 +33,30 @@ func reasonMark(rs VerdictReason) string {
 	return "·"
 }
 
+// ShortTitle drops a trailing parenthetical ("… can be faked (DMARC not
+// enforcing)") when what remains still says something.
+func ShortTitle(s string) string {
+	if !strings.HasSuffix(s, ")") {
+		return s
+	}
+	depth := 0
+	for i := len(s) - 1; i >= 0; i-- {
+		switch s[i] {
+		case ')':
+			depth++
+		case '(':
+			depth--
+			if depth == 0 {
+				if head := strings.TrimSpace(s[:i]); len(head) >= 20 {
+					return head
+				}
+				return s
+			}
+		}
+	}
+	return s
+}
+
 // Axis returns the verdict axis with the given ID.
 func (v *Verdict) Axis(id string) (VerdictAxis, bool) {
 	for _, a := range v.Axes {
