@@ -274,4 +274,6 @@ type VerdictReason struct {
 	// Impact is the buyer impact of a concern.
 	Impact    string `json:"impact,omitempty"`
 	FindingID string `json:"finding_id,omitempty"`
+	// Category is the finding's category, for concerns from findings.
+	Category string `json:"category,omitempty"`
 }

@@ -176,7 +176,7 @@ func (v *verdictInput) concerns(axis string) (rs []report.VerdictReason, blocks,
 		return cs[i].f.Severity.Rank() > cs[j].f.Severity.Rank()
 	})
 	for _, x := range cs {
-		rs = append(rs, report.VerdictReason{Text: reasonText(x.f), Kind: "concern", Impact: x.b, FindingID: x.f.ID})
+		rs = append(rs, report.VerdictReason{Text: reasonText(x.f), Kind: "concern", Impact: x.b, FindingID: x.f.ID, Category: x.f.Category})
 	}
 	return rs, blocks, support, worstSupport
 }
