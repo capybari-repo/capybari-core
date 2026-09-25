@@ -156,8 +156,8 @@ func Page(ctx context.Context, chrome string, client *http.Client, pageURL strin
 	cmd := exec.CommandContext(ctx, chrome, args...)
 	cmd.ExtraFiles = []*os.File{toChrome, fromChrome}
 	cmd.Env = append(os.Environ(), "HOME="+profile)
-	var stderr bytes.Buffer
-	cmd.Stderr = &limited{w: &stderr, n: 16 << 10}
+	stderr := &limited{n: 16 << 10}
+	cmd.Stderr = stderr
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("start chromium: %w", err)
 	}
@@ -503,19 +503,30 @@ func (c *conn) call(ctx context.Context, session, method string, params any, out
 	}
 }
 
+// limited keeps the first n bytes written to it. exec copies the child's
+// stderr from its own goroutine, so reads and writes are locked.
 type limited struct {
-	w io.Writer
-	n int
+	mu  sync.Mutex
+	buf bytes.Buffer
+	n   int
 }
 
 func (l *limited) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	if l.n <= 0 {
 		return len(p), nil
 	}
 	k := min(len(p), l.n)
 	l.n -= k
-	l.w.Write(p[:k])
+	l.buf.Write(p[:k])
 	return len(p), nil
+}
+
+func (l *limited) String() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.buf.String()
 }
 
 func firstLine(s string) string {
