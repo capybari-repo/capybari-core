@@ -56,6 +56,12 @@ var impactRules = map[string]impactRule{
 	"linked-repo-inactive":    {"", finding.Low},
 	"linked-repo-archived":    {"", finding.Low},
 	"missing-docs":            {"", finding.Low},
+	"broken-link":             {"", finding.Low},
+	"dead-cta":                {"", finding.Low},
+	"domain-new":              {"", finding.Low},
+	"domain-expiring":         {"", finding.Low},
+	"email-spoofable":         {"", finding.Low},
+	"brand-mismatch":          {"", finding.Low},
 	"complexity":              {"", finding.High},
 	"dependency-cycle":        {"", finding.High},
 	// Owner homework: never changes a buyer's decision on its own.

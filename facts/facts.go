@@ -21,6 +21,8 @@ const (
 	KeyCommerce     = "commerce"
 	KeyLongevity    = "longevity"
 	KeyCompleteness = "completeness"
+	KeyLinks        = "links"
+	KeyIdentity     = "identity"
 )
 
 // FileKind classifies a file in the repository inventory.
@@ -264,9 +266,12 @@ type WebSnapshot struct {
 	// Links are same-site page links found on the front page.
 	Links []string `json:"links,omitempty"`
 	// Pages are additional same-site pages read after the front page.
-	Pages      []WebPage `json:"pages,omitempty"`
-	FetchedAt  time.Time `json:"fetched_at"`
-	DurationMS int64     `json:"duration_ms"`
+	Pages []WebPage `json:"pages,omitempty"`
+	// LinkChecks record whether same-site links from the front page work:
+	// the pages read, plus a HEAD request for up to 15 more.
+	LinkChecks []LinkCheck `json:"link_checks,omitempty"`
+	FetchedAt  time.Time   `json:"fetched_at"`
+	DurationMS int64       `json:"duration_ms"`
 }
 
 // WebPage is an additional page of the same site. HTML and Text are
@@ -280,6 +285,13 @@ type WebPage struct {
 	Text      string `json:"text,omitempty"`
 	Words     int    `json:"words"`
 	Rendered  bool   `json:"rendered,omitempty"`
+}
+
+// LinkCheck is the outcome of following one same-site link.
+type LinkCheck struct {
+	URL    string `json:"url"`
+	Status int    `json:"status,omitempty"`
+	Error  string `json:"error,omitempty"`
 }
 
 // Header returns the first value of a header, case-insensitively.
@@ -437,4 +449,32 @@ type LinkedRepo struct {
 	URL      string    `json:"url"`
 	PushedAt time.Time `json:"pushed_at,omitzero"`
 	Archived bool      `json:"archived,omitempty"`
+}
+
+// Links summarises whether a website's links and calls to action work.
+type Links struct {
+	Checked int         `json:"checked"`
+	Broken  []LinkCheck `json:"broken,omitempty"`
+	// DeadCTAs are call-to-action links that go nowhere ("#", empty,
+	// javascript:), with the page they are on.
+	DeadCTAs []string `json:"dead_ctas,omitempty"`
+}
+
+// Identity records who a website appears to be: domain registration age,
+// whether email from the domain is protected against spoofing, and whether
+// the site's name matches its domain.
+type Identity struct {
+	Domain     string    `json:"domain"`
+	Registered time.Time `json:"registered,omitzero"`
+	Expires    time.Time `json:"expires,omitzero"`
+	Registrar  string    `json:"registrar,omitempty"`
+	// SPF and DMARC are the published records ("" when absent); Checked
+	// says whether DNS was consulted at all.
+	SPF        string `json:"spf,omitempty"`
+	DMARC      string `json:"dmarc,omitempty"`
+	DNSChecked bool   `json:"dns_checked"`
+	// Brand is the name the site gives itself (title / og:site_name).
+	Brand          string `json:"brand,omitempty"`
+	BrandMatches   bool   `json:"brand_matches"`
+	BrandEvaluated bool   `json:"brand_evaluated"`
 }

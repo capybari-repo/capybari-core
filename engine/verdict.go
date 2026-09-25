@@ -32,9 +32,10 @@ func axisOf(f finding.Finding) string {
 	switch f.Category {
 	case "https", "tls", "mixed-content", "secret", "committed-env-file", "exposure", "malicious-package",
 		"unknown-package", "vulnerable-library", "vulnerability", "cookie", "security-header", "disclosure", "sri",
-		"insecure-credentials", "missing-legal", "missing-contact", "missing-refund":
+		"insecure-credentials", "missing-legal", "missing-contact", "missing-refund",
+		"domain-new", "domain-expiring", "email-spoofable", "brand-mismatch":
 		return report.AxisTrust
-	case "coming-soon", "pricing-stub", "broken-link", "missing-docs":
+	case "coming-soon", "pricing-stub", "broken-link", "dead-cta", "missing-docs":
 		return report.AxisFinish
 	case "stale-content", "linked-repo-inactive", "linked-repo-archived", "inactive-repository", "single-maintainer",
 		"license-restriction", "unmaintained-dependency", "deprecated-package":
@@ -58,11 +59,11 @@ func axisOf(f finding.Finding) string {
 // covers lists the capabilities that can answer each question.
 var covers = map[string]map[analyzer.TargetKind][]string{
 	report.AxisTrust: {
-		analyzer.TargetWebsite:    {"web-security", "commerce"},
+		analyzer.TargetWebsite:    {"web-security", "commerce", "identity"},
 		analyzer.TargetRepository: {"secrets", "vulns"},
 	},
 	report.AxisFinish: {
-		analyzer.TargetWebsite:    {"ai-signals", "commerce", "completeness"},
+		analyzer.TargetWebsite:    {"ai-signals", "commerce", "completeness", "links"},
 		analyzer.TargetRepository: {"ai-signals"},
 	},
 	report.AxisRisk: {
@@ -79,6 +80,8 @@ type verdictInput struct {
 	depth        *facts.SiteDepth
 	longevity    *facts.Longevity
 	completeness *facts.Completeness
+	identity     *facts.Identity
+	links        *facts.Links
 	now          time.Time
 }
 
@@ -120,7 +123,8 @@ func (v *verdictInput) ran(id string) bool {
 func (e *Engine) verdict(st *State, fs []finding.Finding, scores []report.Score) *report.Verdict {
 	v := &verdictInput{st: st, fs: fs, scores: map[string]report.Score{}, now: e.cfg.Now().UTC(),
 		commerce: fact[facts.Commerce](st, facts.KeyCommerce), depth: fact[facts.SiteDepth](st, facts.KeySiteDepth),
-		longevity: fact[facts.Longevity](st, facts.KeyLongevity), completeness: fact[facts.Completeness](st, facts.KeyCompleteness)}
+		longevity: fact[facts.Longevity](st, facts.KeyLongevity), completeness: fact[facts.Completeness](st, facts.KeyCompleteness),
+		identity: fact[facts.Identity](st, facts.KeyIdentity), links: fact[facts.Links](st, facts.KeyLinks)}
 	for _, s := range scores {
 		v.scores[s.ID] = s
 	}
@@ -261,6 +265,14 @@ func (v *verdictInput) trust() report.VerdictAxis {
 			pos = append(pos, positive("Contact details published"))
 		}
 	}
+	if id := v.identity; id != nil {
+		if !id.Registered.IsZero() && v.now.Sub(id.Registered) >= 365*24*time.Hour {
+			pos = append(pos, positive(fmt.Sprintf("Domain registered %s", ago(id.Registered, v.now))))
+		}
+		if id.SPF != "" && (strings.Contains(strings.ToLower(id.DMARC), "p=reject") || strings.Contains(strings.ToLower(id.DMARC), "p=quarantine")) {
+			pos = append(pos, positive("Email protected against spoofing (SPF and DMARC)"))
+		}
+	}
 	if !web {
 		if v.ran("secrets") && !v.has("secret", "committed-env-file") {
 			pos = append(pos, positive("No committed credentials found"))
@@ -334,6 +346,9 @@ func (v *verdictInput) finish() report.VerdictAxis {
 		if met["privacy"] && met["about"] {
 			pos = append(pos, positive("About and privacy pages"))
 		}
+	}
+	if l := v.links; l != nil && l.Checked >= 3 && len(l.Broken) == 0 && len(l.DeadCTAs) == 0 {
+		pos = append(pos, positive(fmt.Sprintf("All %d links checked work", l.Checked)))
 	}
 	if c := v.completeness; c != nil {
 		var has []string
@@ -457,5 +472,5 @@ func sourceName(src string) string {
 // relevant reports whether a not-applicable capability is worth naming in
 // the verdict (one a buyer would expect to have run).
 func relevant(id string) bool {
-	return id == "ai-signals" || id == "commerce" || id == "vulns" || id == "dependencies" || id == "longevity" || id == "completeness"
+	return id == "ai-signals" || id == "commerce" || id == "vulns" || id == "dependencies" || id == "longevity" || id == "completeness" || id == "identity" || id == "links"
 }

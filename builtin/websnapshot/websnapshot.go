@@ -158,7 +158,7 @@ func (*Analyzer) Analyze(ctx context.Context, in *analyzer.Input) (*analyzer.Res
 		}
 	}
 	if final, err := url.Parse(snap.FinalURL); err == nil && snap.Status == 200 && len(snap.Links) > 0 {
-		snap.Pages = crawl(ctx, in.HTTP, final, snap.Links, MaxPages, rd)
+		snap.Pages, snap.LinkChecks = crawl(ctx, in.HTTP, final, snap.Links, MaxPages, rd)
 		for _, p := range snap.Pages {
 			if p.Rendered {
 				snap.Rendered = true
@@ -339,14 +339,21 @@ func addLink(s *facts.WebSnapshot, href string, base *url.URL) {
 	}
 }
 
+// MaxLinkChecks is how many more same-site links, beyond the pages read,
+// get a HEAD request to confirm they work.
+const MaxLinkChecks = 15
+
 // crawl politely reads up to max linked pages: sequentially, same host,
-// honouring robots.txt, HTML only.
-func crawl(ctx context.Context, c *http.Client, base *url.URL, links []string, max int, rd *renderer) []facts.WebPage {
+// honouring robots.txt, HTML only. Every link it follows is recorded with
+// its status, and up to MaxLinkChecks further links get a HEAD request.
+func crawl(ctx context.Context, c *http.Client, base *url.URL, links []string, max int, rd *renderer) ([]facts.WebPage, []facts.LinkCheck) {
 	rules := robots(ctx, c, base)
 	var pages []facts.WebPage
+	var checks []facts.LinkCheck
+	headed := 0
 	seenPath := map[string]bool{base.Path: true}
 	for _, l := range links {
-		if len(pages) >= max || ctx.Err() != nil {
+		if ctx.Err() != nil || len(pages) >= max && headed >= MaxLinkChecks {
 			break
 		}
 		u, err := url.Parse(l)
@@ -354,6 +361,12 @@ func crawl(ctx context.Context, c *http.Client, base *url.URL, links []string, m
 			continue
 		}
 		seenPath[u.Path] = true
+		if len(pages) >= max {
+			checks = append(checks, headCheck(ctx, c, l))
+			headed++
+			time.Sleep(150 * time.Millisecond)
+			continue
+		}
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, l, nil)
 		if err != nil {
 			continue
@@ -361,10 +374,12 @@ func crawl(ctx context.Context, c *http.Client, base *url.URL, links []string, m
 		req.Header.Set("Accept", "text/html,application/xhtml+xml;q=0.9")
 		resp, err := c.Do(req)
 		if err != nil {
+			checks = append(checks, facts.LinkCheck{URL: l, Error: shortErr(err)})
 			continue
 		}
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxPageBytes))
 		resp.Body.Close()
+		checks = append(checks, facts.LinkCheck{URL: l, Status: resp.StatusCode})
 		if resp.StatusCode != 200 || !isHTML(resp.Header.Get("Content-Type"), body) {
 			continue
 		}
@@ -384,7 +399,36 @@ func crawl(ctx context.Context, c *http.Client, base *url.URL, links []string, m
 		pages = append(pages, p)
 		time.Sleep(150 * time.Millisecond) // be gentle with small sites
 	}
-	return pages
+	return pages, checks
+}
+
+// headCheck asks whether a link works without downloading it; servers that
+// do not support HEAD get a GET whose body is not read.
+func headCheck(ctx context.Context, c *http.Client, l string) facts.LinkCheck {
+	for _, method := range []string{http.MethodHead, http.MethodGet} {
+		req, err := http.NewRequestWithContext(ctx, method, l, nil)
+		if err != nil {
+			return facts.LinkCheck{URL: l, Error: shortErr(err)}
+		}
+		resp, err := c.Do(req)
+		if err != nil {
+			return facts.LinkCheck{URL: l, Error: shortErr(err)}
+		}
+		resp.Body.Close()
+		if method == http.MethodHead && (resp.StatusCode == http.StatusMethodNotAllowed || resp.StatusCode == http.StatusNotImplemented) {
+			continue
+		}
+		return facts.LinkCheck{URL: l, Status: resp.StatusCode}
+	}
+	return facts.LinkCheck{URL: l}
+}
+
+func shortErr(err error) string {
+	s := err.Error()
+	if i := strings.LastIndex(s, ": "); i >= 0 {
+		s = s[i+2:]
+	}
+	return s
 }
 
 type robotsRules struct{ disallow, allow []string }
