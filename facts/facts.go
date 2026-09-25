@@ -252,6 +252,11 @@ type WebSnapshot struct {
 	Title        string              `json:"title,omitempty"`
 	Meta         map[string]string   `json:"meta,omitempty"`
 	Resources    []Resource          `json:"resources,omitempty"`
+	// Rendered is true when the page was loaded in headless Chromium because
+	// its HTML alone contained too little text (JavaScript-built pages).
+	Rendered bool `json:"rendered,omitempty"`
+	// RenderRequests counts requests made on the rendered pages' behalf.
+	RenderRequests int `json:"render_requests,omitempty"`
 	// Links are same-site page links found on the front page.
 	Links []string `json:"links,omitempty"`
 	// Pages are additional same-site pages read after the front page.
@@ -270,6 +275,7 @@ type WebPage struct {
 	HTML      string `json:"html,omitempty"`
 	Text      string `json:"text,omitempty"`
 	Words     int    `json:"words"`
+	Rendered  bool   `json:"rendered,omitempty"`
 }
 
 // Header returns the first value of a header, case-insensitively.

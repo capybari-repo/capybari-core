@@ -10,9 +10,11 @@ import (
 	"github.com/capybari-repo/capybari-core/analyzertest"
 	"github.com/capybari-repo/capybari-core/builtin/websnapshot"
 	"github.com/capybari-repo/capybari-core/facts"
+	"github.com/capybari-repo/capybari-core/render"
 )
 
 func TestSnapshot(t *testing.T) {
+	t.Setenv("CAPYBARI_RENDER", "0")
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/old" {
 			http.Redirect(w, r, "/", http.StatusMovedPermanently)
@@ -55,6 +57,7 @@ func TestSnapshot(t *testing.T) {
 }
 
 func TestCrawlIsPolite(t *testing.T) {
+	t.Setenv("CAPYBARI_RENDER", "0")
 	var mu sync.Mutex
 	requested := map[string]bool{}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -100,5 +103,51 @@ func TestCrawlIsPolite(t *testing.T) {
 	r.Fact(facts.KeyWebSnapshot, &pub)
 	if len(pub.Pages) != 2 || pub.Pages[0].HTML != "" || pub.Pages[0].Text != "" || len(pub.Links) != 0 {
 		t.Fatalf("public fact leaks page content: %+v", pub.Pages)
+	}
+}
+
+func TestJavaScriptPageIsRendered(t *testing.T) {
+	if render.Find() == "" {
+		t.Skip("no headless Chromium available")
+	}
+	words := strings.Repeat("genuine product description words ", 50)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/", "/about":
+			w.Header().Set("Content-Type", "text/html")
+			w.Write([]byte(`<html><head><title>App</title></head><body><div id="root">Loading...</div><script src="/app.js"></script></body></html>`))
+		case "/app.js":
+			w.Header().Set("Content-Type", "application/javascript")
+			w.Write([]byte(`document.getElementById("root").innerHTML = "<p>` + words + `</p><a href='/about'>About</a>";`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+	_, st := analyzertest.RunState(t, websnapshot.New(), analyzertest.Website(srv.URL), analyzertest.Options{Online: true})
+	var ws facts.WebSnapshot
+	st.Get(facts.KeyWebSnapshot, &ws)
+	if !ws.Rendered || !strings.Contains(ws.Body, "genuine product description") {
+		t.Fatalf("front page not rendered: rendered=%v body=%.200s", ws.Rendered, ws.Body)
+	}
+	if len(ws.Pages) != 1 || !ws.Pages[0].Rendered || ws.Pages[0].Words < 150 {
+		t.Fatalf("linked page (only discoverable after rendering) not rendered: %+v", ws.Pages)
+	}
+	if ws.RenderRequests < 2 {
+		t.Fatalf("render requests not counted: %d", ws.RenderRequests)
+	}
+}
+
+func TestRenderingDisabledIsExplained(t *testing.T) {
+	t.Setenv("CAPYBARI_RENDER", "0")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`<html><body><div id="root">Loading...</div><script src="/app.js"></script></body></html>`))
+	}))
+	defer srv.Close()
+	r := analyzertest.Run(t, websnapshot.New(), analyzertest.Website(srv.URL), analyzertest.Options{Online: true})
+	run, _ := r.Capability("web-snapshot")
+	if !strings.Contains(strings.Join(run.Limitations, "|"), "no headless Chromium is installed") {
+		t.Fatalf("missing explanation: %v", run.Limitations)
 	}
 }

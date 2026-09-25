@@ -1,8 +1,8 @@
 id: web-snapshot
 name: Website Snapshot
-version: 0.2.0
+version: 0.3.0
 category: website
-summary: Fetches the website's front page (following redirects) and up to 5 linked pages of the same site, recording headers, TLS, cookies, page structure and visible text for other website capabilities.
+summary: Fetches the website's front page (following redirects) and up to 5 linked pages of the same site, recording headers, TLS, cookies, page structure and visible text for other website capabilities. Pages built by JavaScript are rendered in headless Chromium when it is available.
 stability: stable
 core_api: v0
 targets: [website]
@@ -12,13 +12,18 @@ execution:
   local: false
   network: required
   ai: none
-  network_hosts: [$target]
+  network_hosts: [$target, "*"]
 privacy: >-
   Sends ordinary HTTP GET requests to the scanned website only: the front page,
   its plain-http version (to check the HTTPS redirect), robots.txt, and at most
   5 same-site pages linked from the front page, one at a time and honouring
-  robots.txt. Login, logout, admin, cart and file links are never followed. No
-  source code or personal data is sent.
+  robots.txt. Login, logout, admin, cart and file links are never followed.
+  When a page is built by JavaScript it is rendered in headless Chromium; the
+  scripts and API calls the page itself makes (possibly to third-party hosts
+  such as CDNs) are then performed on its behalf, and every host contacted is
+  listed in the report. Images, fonts, media and known analytics/tracking
+  services are never fetched, so a scan is not counted as a visit. No source code
+  or personal data is sent.
 follow_ups:
   - capability: web-tech
     reason: Identify the technologies behind the site from the snapshot already taken.

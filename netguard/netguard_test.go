@@ -9,6 +9,9 @@ import (
 )
 
 func TestHostAllowed(t *testing.T) {
+	if !HostAllowed([]string{"*"}, "cdn.anything.net") {
+		t.Error(`"*" must allow any host`)
+	}
 	allowed := []string{"api.osv.dev", "*.example.com"}
 	for host, want := range map[string]bool{
 		"api.osv.dev": true, "API.OSV.DEV": true, "evil.dev": false,

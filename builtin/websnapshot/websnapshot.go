@@ -15,6 +15,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -24,6 +25,7 @@ import (
 
 	"github.com/capybari-repo/capybari-core/analyzer"
 	"github.com/capybari-repo/capybari-core/facts"
+	"github.com/capybari-repo/capybari-core/render"
 	"github.com/capybari-repo/capybari-core/webtext"
 )
 
@@ -37,6 +39,10 @@ const MaxBody = 2 << 20
 
 // MaxPages is how many additional same-site pages are read.
 const MaxPages = 5
+
+// RenderBelowWords: pages with less visible text than this in their HTML
+// are rendered in headless Chromium when it is available.
+const RenderBelowWords = 150
 
 // maxPageBytes caps each additional page.
 const maxPageBytes = 512 << 10
@@ -140,9 +146,30 @@ func (*Analyzer) Analyze(ctx context.Context, in *analyzer.Input) (*analyzer.Res
 	if snap.Truncated {
 		limits = append(limits, fmt.Sprintf("Page body larger than %d bytes was truncated.", MaxBody))
 	}
-	if final, err := url.Parse(snap.FinalURL); err == nil && snap.Status == 200 && len(snap.Links) > 0 {
-		snap.Pages = crawl(ctx, in.HTTP, final, snap.Links, MaxPages)
+	rd := newRenderer(in)
+	if snap.Status == 200 && snap.Body != "" && webtext.Words(webtext.Visible(snap.Body)) < RenderBelowWords {
+		if html, final, n, note := rd.render(ctx, snap.FinalURL); html != "" {
+			base, _ := url.Parse(final)
+			snap.Body, snap.Rendered, snap.RenderRequests = html, true, n
+			snap.Title, snap.Meta, snap.Resources, snap.Links = "", nil, nil, nil
+			parsePage(snap, []byte(html), base)
+		} else if note != "" {
+			limits = append(limits, note)
+		}
 	}
+	if final, err := url.Parse(snap.FinalURL); err == nil && snap.Status == 200 && len(snap.Links) > 0 {
+		snap.Pages = crawl(ctx, in.HTTP, final, snap.Links, MaxPages, rd)
+		for _, p := range snap.Pages {
+			if p.Rendered {
+				snap.Rendered = true
+			}
+		}
+	}
+	snap.RenderRequests += rd.requests
+	if snap.Rendered {
+		limits = append(limits, fmt.Sprintf("JavaScript-built pages were rendered in headless Chromium; %d requests (including third-party scripts and APIs) were made on their behalf, each recorded in the data boundary. Images, fonts, media and known analytics/tracking services were not fetched.", snap.RenderRequests))
+	}
+	limits = append(limits, rd.notes...)
 	limits = append(limits, fmt.Sprintf("The front page and up to %d linked pages of the same site were read (%d this time); authenticated areas and the rest of the site were not inspected.", MaxPages, len(snap.Pages)))
 	return &analyzer.Result{
 		Evidence:    map[string]any{facts.KeyWebSnapshot: snap},
@@ -281,7 +308,7 @@ func parsePage(s *facts.WebSnapshot, body []byte, base *url.URL) {
 
 // skipLink excludes links that are not content pages or that could trigger
 // an action even over GET (logout, cart, delete...).
-var skipLink = regexp.MustCompile(`(?i)(logout|log-out|signout|sign-out|/cart|add-to-cart|/checkout|delete|unsubscribe|/wp-admin|/admin|login|/signin|/register|/feed|\.(pdf|zip|gz|jpe?g|png|gif|webp|svg|mp4|mp3|css|js|json|xml|ico|woff2?)$)`)
+var skipLink = regexp.MustCompile(`(?i)(/cdn-cgi/|logout|log-out|signout|sign-out|/cart|add-to-cart|/checkout|delete|unsubscribe|/wp-admin|/admin|login|/signin|/register|/feed|\.(pdf|zip|gz|jpe?g|png|gif|webp|svg|mp4|mp3|css|js|json|xml|ico|woff2?)$)`)
 
 // addLink records a same-host page link (fragment removed, deduplicated).
 func addLink(s *facts.WebSnapshot, href string, base *url.URL) {
@@ -314,7 +341,7 @@ func addLink(s *facts.WebSnapshot, href string, base *url.URL) {
 
 // crawl politely reads up to max linked pages: sequentially, same host,
 // honouring robots.txt, HTML only.
-func crawl(ctx context.Context, c *http.Client, base *url.URL, links []string, max int) []facts.WebPage {
+func crawl(ctx context.Context, c *http.Client, base *url.URL, links []string, max int, rd *renderer) []facts.WebPage {
 	rules := robots(ctx, c, base)
 	var pages []facts.WebPage
 	seenPath := map[string]bool{base.Path: true}
@@ -342,8 +369,15 @@ func crawl(ctx context.Context, c *http.Client, base *url.URL, links []string, m
 			continue
 		}
 		p := facts.WebPage{URL: resp.Request.URL.String(), Status: resp.StatusCode, HTML: string(body)}
+		if webtext.Words(webtext.Visible(p.HTML)) < RenderBelowWords && rd.used {
+			// The site builds pages with JavaScript: read this one rendered too.
+			if html, final, n, _ := rd.render(ctx, p.URL); html != "" {
+				p.HTML, p.URL, p.Rendered = html, final, true
+				rd.requests += n
+			}
+		}
 		var tmp facts.WebSnapshot
-		parsePage(&tmp, body, resp.Request.URL)
+		parsePage(&tmp, []byte(p.HTML), resp.Request.URL)
 		p.Title, p.Generator = tmp.Title, tmp.Meta["generator"]
 		p.Text = webtext.Visible(p.HTML)
 		p.Words = webtext.Words(p.Text)
@@ -420,4 +454,45 @@ func robots(ctx context.Context, c *http.Client, base *url.URL) robotsRules {
 		}
 	}
 	return r
+}
+
+// renderer renders JavaScript-built pages with headless Chromium, if present.
+type renderer struct {
+	in       *analyzer.Input
+	chrome   string
+	disabled bool
+	used     bool // at least one page needed and got rendering
+	noSand   bool // Chromium's sandbox was unavailable; fell back once
+	requests int
+	notes    []string
+}
+
+func newRenderer(in *analyzer.Input) *renderer {
+	r := &renderer{in: in, chrome: render.Find(), disabled: in.Options["render"] == "false"}
+	r.noSand = os.Geteuid() == 0 || os.Getenv("CAPYBARI_CHROME_NO_SANDBOX") == "1"
+	return r
+}
+
+// render returns the rendered HTML and final URL, or a note explaining why
+// rendering was not possible.
+func (r *renderer) render(ctx context.Context, pageURL string) (html, final string, requests int, note string) {
+	switch {
+	case r.disabled:
+		return "", "", 0, "This page shows little text without JavaScript; rendering was disabled, so its content was not analysed."
+	case r.chrome == "":
+		return "", "", 0, "This page shows little text without JavaScript and no headless Chromium is installed, so its content was not analysed. Install chrome-headless-shell (or set CAPYBARI_CHROME) to read JavaScript-built pages."
+	}
+	res, err := render.Page(ctx, r.chrome, r.in.HTTP, pageURL, render.Options{NoSandbox: r.noSand})
+	if err != nil && !r.noSand && (strings.Contains(err.Error(), "did not start") || strings.Contains(err.Error(), "browser exited")) {
+		// Hosts without unprivileged user namespaces cannot run Chromium's
+		// sandbox; network mediation and process isolation still apply.
+		r.noSand = true
+		r.notes = append(r.notes, "Chromium's own sandbox is unavailable on this host; rendering relied on network mediation and process isolation.")
+		res, err = render.Page(ctx, r.chrome, r.in.HTTP, pageURL, render.Options{NoSandbox: true})
+	}
+	if err != nil {
+		return "", "", 0, "Rendering this JavaScript-built page failed: " + err.Error()
+	}
+	r.used = true
+	return res.HTML, res.URL, res.Requests, ""
 }

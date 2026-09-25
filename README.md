@@ -14,6 +14,9 @@
 | `target` | Resolves user input: folders, archives (zip-slip-safe), repository URLs (git clone) and website URLs. |
 | `netguard` | HTTP clients that enforce each capability's host allow-list, optionally block private networks (hosted mode) and record every outbound call. |
 | `cache` | Local SQLite result cache (pure Go, no cgo). |
+| `render` | Headless Chromium rendering for JavaScript-built pages, spoken over the DevTools pipe. Chromium has no network of its own: every request is performed by the capability's guarded client, and trackers, images, fonts and media are blocked. |
+| `webtext` | Shared visible-text extraction for website capabilities. |
+| `lifecycle` | Bundled, dated end-of-life data shared by technology detection. |
 | `builtin` | Capabilities every other capability depends on: `inventory` (Repository Inventory) and `web-snapshot` (Website Snapshot). |
 | `standalone` | Helper that gives each analyzer repository its own small binary. |
 | `analyzertest` | Test helpers: run a capability through the real pipeline, golden files. |
