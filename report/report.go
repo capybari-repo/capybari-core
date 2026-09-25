@@ -70,8 +70,29 @@ type CapabilityRun struct {
 	Limitations  []string           `json:"limitations,omitempty"`
 }
 
-// Score is one dimension score. Every score uses the same direction:
-// 0 = worst, 100 = best (Cross-Tool Intelligence, Section 5).
+// Score directions.
+const (
+	// HigherIsBetter is the default for dimension scores: 0 = worst, 100 = best.
+	HigherIsBetter = "higher-is-better"
+	// HigherIsWorse is used by meters such as the AI Slop Score:
+	// 0 = clean, 100 = worst.
+	HigherIsWorse = "higher-is-worse"
+)
+
+// ScoreComponent is one group of evidence inside a composite score.
+type ScoreComponent struct {
+	ID       string  `json:"id"`
+	Name     string  `json:"name"`
+	Points   float64 `json:"points"`   // penalty points contributed (after the group cap)
+	Findings int     `json:"findings"` // findings in this group
+	Assessed bool    `json:"assessed"` // false when no capability covering the group ran
+	// FindingIDs lists the findings counted in this group (for drill-down).
+	FindingIDs []string `json:"finding_ids,omitempty"`
+}
+
+// Score is one score. Dimension scores run 0 = worst, 100 = best; meters
+// such as the AI Slop Score declare Direction "higher-is-worse". Rating is
+// always from the reader's point of view (good = healthy / little slop).
 type Score struct {
 	ID           string                   `json:"id"`
 	Name         string                   `json:"name"`
@@ -85,7 +106,16 @@ type Score struct {
 	// contributing capability), so a perfect score is never unexplained.
 	Basis       []string `json:"basis,omitempty"`
 	Methodology string   `json:"methodology"`
+	// Direction is empty (= higher-is-better) for dimension scores.
+	Direction string `json:"direction,omitempty"`
+	// Label is a plain-language level, e.g. "Moderate slop".
+	Label string `json:"label,omitempty"`
+	// Components break a composite score down by evidence group.
+	Components []ScoreComponent `json:"components,omitempty"`
 }
+
+// IsHigherWorse reports whether the score is a meter where 100 is worst.
+func (s Score) IsHigherWorse() bool { return s.Direction == HigherIsWorse }
 
 // Recommendation kinds.
 const (

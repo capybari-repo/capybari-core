@@ -96,9 +96,22 @@ func WriteMarkdown(w io.Writer, r *Report) error {
 	p("\n\n")
 
 	if len(r.Scores) > 0 {
-		p("## Scores\n\n_All scores: 0 = worst, 100 = best._\n\n| Dimension | Score | Rating | Confidence | Summary |\n|---|---:|---|---|---|\n")
+		p("## Scores\n\n_Health scores: 0 = worst, 100 = best. The AI Slop Score is a meter: 0 = clean, 100 = pure slop (higher is worse)._\n\n| Score | Value | Rating | Confidence | Summary |\n|---|---:|---|---|---|\n")
 		for _, s := range r.Scores {
-			p("| %s | **%d** | %s | %s | %s |\n", s.Name, s.Value, s.Rating, s.Confidence, mdEscape(s.Summary))
+			rating := s.Rating
+			if s.IsHigherWorse() {
+				rating = s.Label + " (higher = more slop)"
+			}
+			p("| %s | **%d** | %s | %s | %s |\n", s.Name, s.Value, rating, s.Confidence, mdEscape(s.Summary))
+		}
+		for _, s := range r.Scores {
+			if len(s.Components) == 0 {
+				continue
+			}
+			p("\n**%s breakdown:**\n\n| Group | Findings | Points | Assessed |\n|---|---:|---:|---|\n", s.Name)
+			for _, c := range s.Components {
+				p("| %s | %d | %.1f | %s |\n", c.Name, c.Findings, c.Points, yes(c.Assessed))
+			}
 		}
 		p("\n")
 		for _, s := range r.Scores {

@@ -210,6 +210,9 @@ func (e *Engine) scores(st *State, fs []finding.Finding) []report.Score {
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	if slop := e.aiSlop(st, fs); slop != nil {
+		out = append([]report.Score{*slop}, out...)
+	}
 	return out
 }
 
