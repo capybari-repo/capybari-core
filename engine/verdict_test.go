@@ -140,7 +140,9 @@ func TestVerdictRepositoryRisk(t *testing.T) {
 func TestVerdictYoungProductWithoutOpsTrail(t *testing.T) {
 	now := time.Date(2026, 9, 25, 0, 0, 0, 0, time.UTC)
 	web := func(c *analyzer.Capability) { c.Targets = []analyzer.TargetKind{analyzer.TargetWebsite} }
-	provides := func(k string) func(*analyzer.Capability) { return func(c *analyzer.Capability) { c.Provides = []string{k} } }
+	provides := func(k string) func(*analyzer.Capability) {
+		return func(c *analyzer.Capability) { c.Provides = []string{k} }
+	}
 	find := func(cat, title string, sev finding.Severity, dim string) finding.Finding {
 		return finding.Finding{Category: cat, Title: title, Severity: sev, Confidence: finding.ConfidenceHigh, Dimension: dim}
 	}

@@ -39,7 +39,6 @@ func axisOf(f finding.Finding) string {
 		return report.AxisFinish
 	case "purchase-path-unverified":
 		return report.AxisTrust
-		return report.AxisFinish
 	case "stale-content", "no-ops-trail", "linked-repo-inactive", "linked-repo-archived", "inactive-repository", "single-maintainer",
 		"license-restriction", "unmaintained-dependency", "deprecated-package":
 		return report.AxisRisk

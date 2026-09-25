@@ -98,6 +98,26 @@ func (e *Engine) Report(st *State) *report.Report {
 	r.Verdict = e.verdict(st, r.Findings, r.Scores)
 	r.Recommendations = e.recommend(st, r.Findings)
 	r.Summary = summarize(st, r)
+	// The Trust Score leads the summary when there is one.
+	for _, sc := range r.Scores {
+		if sc.ID == TrustScoreID {
+			lead := fmt.Sprintf("%s: Trust Score %d/100 (%s, %s)", st.Target.Display, sc.Value, sc.Grade, sc.Label)
+			if len(sc.Ceilings) > 0 && sc.Ceilings[0].Max == sc.Value {
+				lead += fmt.Sprintf(", held at %d: %s", sc.Value, lowerFirst(report.ShortTitle(sc.Ceilings[0].Reason)))
+			}
+			var top []string
+			for i, d := range sc.Deductions {
+				if i == 3 {
+					break
+				}
+				top = append(top, fmt.Sprintf("%s (−%d)", lowerFirst(report.ShortTitle(d.Text)), d.Points))
+			}
+			if len(top) > 0 {
+				lead += ". Biggest deductions: " + strings.Join(top, "; ")
+			}
+			r.Summary.Headline = lead + "."
+		}
+	}
 	r.DataBoundary = e.dataBoundary(st)
 	r.Limitations = append(r.Limitations,
 		"Automated analysis reports what its analyzers can detect. It does not certify software as secure or defect-free.")
@@ -220,6 +240,9 @@ func (e *Engine) scores(st *State, fs []finding.Finding) []report.Score {
 	}
 	if slop := e.aiSlop(st, fs); slop != nil {
 		out = append([]report.Score{*slop}, out...)
+	}
+	if ts := e.trustScore(st, fs, out); ts != nil {
+		out = append([]report.Score{*ts}, out...)
 	}
 	return out
 }

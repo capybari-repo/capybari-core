@@ -116,6 +116,13 @@ type Score struct {
 	// Caveat is shown with the value whenever the evidence behind it is
 	// thin, so a high number is never read as a clean bill of health.
 	Caveat string `json:"caveat,omitempty"`
+	// Grade is a letter (A–F) for scores that have one (the Trust Score).
+	Grade string `json:"grade,omitempty"`
+	// Deductions itemise what cost points, largest first (the Trust Score).
+	Deductions []Deduction `json:"deductions,omitempty"`
+	// Ceilings are conditions that hold a score down however good the rest
+	// is (e.g. a domain registered days ago); the lowest one applies.
+	Ceilings []Ceiling `json:"ceilings,omitempty"`
 }
 
 // IsHigherWorse reports whether the score is a meter where 100 is worst.
@@ -284,4 +291,20 @@ type VerdictReason struct {
 	FindingID string `json:"finding_id,omitempty"`
 	// Category is the finding's category, for concerns from findings.
 	Category string `json:"category,omitempty"`
+}
+
+// Deduction is one line of the Trust Score receipt.
+type Deduction struct {
+	Group     string `json:"group"`
+	Text      string `json:"text"`
+	Points    int    `json:"points"`
+	FindingID string `json:"finding_id,omitempty"`
+}
+
+// Ceiling is a condition that caps a score, e.g. at most 30 for a domain
+// under three months old.
+type Ceiling struct {
+	Max       int    `json:"max"`
+	Reason    string `json:"reason"`
+	FindingID string `json:"finding_id,omitempty"`
 }
