@@ -19,6 +19,8 @@ const (
 	KeyWebSnapshot  = "web-snapshot"
 	KeySiteDepth    = "site-depth"
 	KeyCommerce     = "commerce"
+	KeyLongevity    = "longevity"
+	KeyCompleteness = "completeness"
 )
 
 // FileKind classifies a file in the repository inventory.
@@ -373,10 +375,10 @@ type Commerce struct {
 	PaymentProviders []string `json:"payment_providers,omitempty"`
 	// Stores are app stores and marketplaces the product is sold through
 	// (App Store, Google Play, Steam…); they handle payment and refunds.
-	Stores []string `json:"stores,omitempty"`
-	Login            bool     `json:"login"`
-	Signup           bool     `json:"signup"`
-	Checkout         bool     `json:"checkout"`
+	Stores   []string `json:"stores,omitempty"`
+	Login    bool     `json:"login"`
+	Signup   bool     `json:"signup"`
+	Checkout bool     `json:"checkout"`
 	// Sells is true when the site takes money or accounts: a payment
 	// provider, checkout, prices, or a login/sign-up.
 	Sells bool `json:"sells"`
@@ -389,4 +391,50 @@ type Commerce struct {
 	Refund      string `json:"refund,omitempty"`
 	Contact     string `json:"contact,omitempty"`
 	ComingSoon  bool   `json:"coming_soon"`
+}
+
+// Longevity summarises whether a repository is likely to be maintained a
+// year from now: recent activity, how many people carry it, releases and
+// what its license allows. Author identities are never recorded.
+type Longevity struct {
+	LastCommit time.Time `json:"last_commit,omitzero"`
+	// CommitsLastYear and ActiveMonths count non-merge, non-bot commits in
+	// the 12 months before the scan (within the history available).
+	CommitsLastYear int `json:"commits_last_year"`
+	ActiveMonths    int `json:"active_months"`
+	// Authors, TopAuthorShare and BusFactor describe the same window, or
+	// the most recent 200 commits when the last year had none.
+	Authors        int     `json:"authors"`
+	TopAuthorShare float64 `json:"top_author_share"`
+	// BusFactor is the fewest authors who together made half the commits.
+	BusFactor         int       `json:"bus_factor"`
+	LatestRelease     string    `json:"latest_release,omitempty"`
+	LatestReleaseDate time.Time `json:"latest_release_date,omitzero"`
+	License           string    `json:"license,omitempty"`
+	// LicenseClass is permissive, weak-copyleft, copyleft,
+	// network-copyleft, source-available, noncommercial or unknown.
+	LicenseClass string `json:"license_class,omitempty"`
+	Shallow      bool   `json:"shallow,omitempty"`
+}
+
+// Completeness records signs that a website belongs to a maintained
+// product: documentation, changelog, status page, support community,
+// linked source repositories and the most recent dated content.
+type Completeness struct {
+	Docs       string `json:"docs,omitempty"`
+	Changelog  string `json:"changelog,omitempty"`
+	StatusPage string `json:"status_page,omitempty"`
+	Community  string `json:"community,omitempty"`
+	// LatestDate is the most recent date found on the pages or in the
+	// sitemap (future dates ignored); LatestDateSource says where.
+	LatestDate       time.Time    `json:"latest_date,omitzero"`
+	LatestDateSource string       `json:"latest_date_source,omitempty"`
+	Repos            []LinkedRepo `json:"repos,omitempty"`
+}
+
+// LinkedRepo is a public source repository linked from a website.
+type LinkedRepo struct {
+	URL      string    `json:"url"`
+	PushedAt time.Time `json:"pushed_at,omitzero"`
+	Archived bool      `json:"archived,omitempty"`
 }

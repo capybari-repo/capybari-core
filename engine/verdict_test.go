@@ -5,9 +5,11 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/capybari-repo/capybari-core/analyzer"
 	"github.com/capybari-repo/capybari-core/engine"
+	"github.com/capybari-repo/capybari-core/facts"
 	"github.com/capybari-repo/capybari-core/finding"
 	"github.com/capybari-repo/capybari-core/report"
 	"github.com/capybari-repo/capybari-schemas"
@@ -97,6 +99,37 @@ func TestVerdict(t *testing.T) {
 		report.Write(&buf, r, f)
 		if i, j := strings.Index(buf.String(), "Verdict: Trust blockers found"), strings.Index(buf.String(), "Scores"); i < 0 || i > j {
 			t.Fatalf("%s: verdict must come before scores", f)
+		}
+	}
+}
+
+func TestVerdictRepositoryRisk(t *testing.T) {
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	lg := &fake{c: capOf("longevity", func(c *analyzer.Capability) { c.Provides = []string{facts.KeyLongevity} }),
+		run: func(*analyzer.Input) (*analyzer.Result, error) {
+			return &analyzer.Result{
+				Evidence: map[string]any{facts.KeyLongevity: facts.Longevity{CommitsLastYear: 120, ActiveMonths: 11, BusFactor: 3,
+					LatestRelease: "v2.1.0", LatestReleaseDate: now.Add(-20 * 24 * time.Hour), License: "MIT", LicenseClass: "permissive"}},
+				Findings: []finding.Finding{{Category: "license-restriction", Title: "License does not allow commercial use", Severity: finding.High,
+					Confidence: finding.ConfidenceMedium, Dimension: finding.DimOperability, Impact: &finding.Impact{Buyer: finding.BuyerBlocks}}},
+			}, nil
+		}}
+	r, _, err := newEngine(t, engine.Config{Now: func() time.Time { return now }}, lg).Analyze(context.Background(), repo, engine.Selection{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	risk, _ := r.Verdict.Axis(report.AxisRisk)
+	if risk.Label != "High regret risk" || risk.Reasons[0].Text != "License does not allow commercial use" {
+		t.Fatalf("a non-commercial license must make the risk high: %+v", risk)
+	}
+	var texts []string
+	for _, rs := range risk.Reasons {
+		texts = append(texts, rs.Text)
+	}
+	joined := strings.Join(texts, "|")
+	for _, want := range []string{"Active: 120 commits in 11 of the last 12 months", "Shared maintenance: 3 people", "Latest release v2.1.0, 2 weeks ago"} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("missing %q in %v", want, texts)
 		}
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/capybari-repo/capybari-core/analyzer"
 	"github.com/capybari-repo/capybari-core/facts"
@@ -33,8 +34,11 @@ func axisOf(f finding.Finding) string {
 		"unknown-package", "vulnerable-library", "vulnerability", "cookie", "security-header", "disclosure", "sri",
 		"insecure-credentials", "missing-legal", "missing-contact", "missing-refund":
 		return report.AxisTrust
-	case "coming-soon", "pricing-stub", "broken-link":
+	case "coming-soon", "pricing-stub", "broken-link", "missing-docs":
 		return report.AxisFinish
+	case "stale-content", "linked-repo-inactive", "linked-repo-archived", "inactive-repository", "single-maintainer",
+		"license-restriction", "unmaintained-dependency", "deprecated-package":
+		return report.AxisRisk
 	}
 	switch f.Dimension {
 	case finding.DimSecurity, finding.DimTrust, finding.DimData:
@@ -58,21 +62,54 @@ var covers = map[string]map[analyzer.TargetKind][]string{
 		analyzer.TargetRepository: {"secrets", "vulns"},
 	},
 	report.AxisFinish: {
-		analyzer.TargetWebsite:    {"ai-signals", "commerce"},
+		analyzer.TargetWebsite:    {"ai-signals", "commerce", "completeness"},
 		analyzer.TargetRepository: {"ai-signals"},
 	},
 	report.AxisRisk: {
-		analyzer.TargetWebsite:    {"web-tech"},
-		analyzer.TargetRepository: {"tech-detect", "dependencies", "fingerprint", "code-health"},
+		analyzer.TargetWebsite:    {"web-tech", "completeness"},
+		analyzer.TargetRepository: {"longevity", "tech-detect", "dependencies", "vulns", "fingerprint", "code-health"},
 	},
 }
 
 type verdictInput struct {
-	st       *State
-	fs       []finding.Finding
-	scores   map[string]report.Score
-	commerce *facts.Commerce
-	depth    *facts.SiteDepth
+	st           *State
+	fs           []finding.Finding
+	scores       map[string]report.Score
+	commerce     *facts.Commerce
+	depth        *facts.SiteDepth
+	longevity    *facts.Longevity
+	completeness *facts.Completeness
+	now          time.Time
+}
+
+// fact decodes evidence into out when present.
+func fact[T any](st *State, key string) *T {
+	raw, ok := st.Evidence[key]
+	if !ok {
+		return nil
+	}
+	var v T
+	if json.Unmarshal(raw, &v) != nil {
+		return nil
+	}
+	return &v
+}
+
+// ago phrases how long before now t was, e.g. "3 weeks ago".
+func ago(t, now time.Time) string {
+	d := now.Sub(t)
+	switch days := int(d.Hours() / 24); {
+	case days < 1:
+		return "today"
+	case days < 14:
+		return fmt.Sprintf("%d days ago", days)
+	case days < 60:
+		return fmt.Sprintf("%d weeks ago", days/7)
+	case days < 730:
+		return fmt.Sprintf("%d months ago", days/30)
+	default:
+		return fmt.Sprintf("%d years ago", days/365)
+	}
 }
 
 func (v *verdictInput) ran(id string) bool {
@@ -81,21 +118,11 @@ func (v *verdictInput) ran(id string) bool {
 }
 
 func (e *Engine) verdict(st *State, fs []finding.Finding, scores []report.Score) *report.Verdict {
-	v := &verdictInput{st: st, fs: fs, scores: map[string]report.Score{}}
+	v := &verdictInput{st: st, fs: fs, scores: map[string]report.Score{}, now: e.cfg.Now().UTC(),
+		commerce: fact[facts.Commerce](st, facts.KeyCommerce), depth: fact[facts.SiteDepth](st, facts.KeySiteDepth),
+		longevity: fact[facts.Longevity](st, facts.KeyLongevity), completeness: fact[facts.Completeness](st, facts.KeyCompleteness)}
 	for _, s := range scores {
 		v.scores[s.ID] = s
-	}
-	if raw, ok := st.Evidence[facts.KeyCommerce]; ok {
-		var c facts.Commerce
-		if json.Unmarshal(raw, &c) == nil {
-			v.commerce = &c
-		}
-	}
-	if raw, ok := st.Evidence[facts.KeySiteDepth]; ok {
-		var d facts.SiteDepth
-		if json.Unmarshal(raw, &d) == nil {
-			v.depth = &d
-		}
 	}
 	out := &report.Verdict{Impact: map[string]int{finding.BuyerBlocks: 0, finding.BuyerSupportCost: 0, finding.BuyerCosmetic: 0}, Disclaimer: VerdictDisclaimer}
 	for _, f := range fs {
@@ -308,6 +335,17 @@ func (v *verdictInput) finish() report.VerdictAxis {
 			pos = append(pos, positive("About and privacy pages"))
 		}
 	}
+	if c := v.completeness; c != nil {
+		var has []string
+		for _, x := range []struct{ v, name string }{{c.Docs, "documentation"}, {c.Changelog, "a changelog"}, {c.StatusPage, "a status page"}, {c.Community, "a support community"}} {
+			if x.v != "" {
+				has = append(has, x.name)
+			}
+		}
+		if len(has) > 0 {
+			pos = append(pos, positive("Has "+joinAnd(has)))
+		}
+	}
 	if hasSlop && slop.Value < 20 && blocks == 0 && !v.has("placeholder-content", "template-leftover") {
 		pos = append(pos, positive("No placeholders, template leftovers or generator defaults"))
 	}
@@ -331,6 +369,31 @@ func (v *verdictInput) risk() report.VerdictAxis {
 	}
 	rs, blocks, support, worst := v.concerns(report.AxisRisk)
 	var pos []report.VerdictReason
+	if c := v.completeness; c != nil && !c.LatestDate.IsZero() && v.now.Sub(c.LatestDate) < 365*24*time.Hour {
+		pos = append(pos, positive(fmt.Sprintf("Content updated %s (%s)", ago(c.LatestDate, v.now), sourceName(c.LatestDateSource))))
+	}
+	if c := v.completeness; c != nil {
+		for _, r := range c.Repos {
+			if !r.Archived && !r.PushedAt.IsZero() && v.now.Sub(r.PushedAt) < 180*24*time.Hour {
+				pos = append(pos, positive(fmt.Sprintf("Linked source repository updated %s", ago(r.PushedAt, v.now))))
+				break
+			}
+		}
+	}
+	if l := v.longevity; l != nil {
+		if l.CommitsLastYear > 0 {
+			pos = append(pos, positive(fmt.Sprintf("Active: %d commits in %d of the last 12 months", l.CommitsLastYear, l.ActiveMonths)))
+		}
+		if l.BusFactor >= 2 {
+			pos = append(pos, positive(fmt.Sprintf("Shared maintenance: %d people made half the recent commits", l.BusFactor)))
+		}
+		if l.LatestRelease != "" && v.now.Sub(l.LatestReleaseDate) < 365*24*time.Hour {
+			pos = append(pos, positive(fmt.Sprintf("Latest release %s, %s", l.LatestRelease, ago(l.LatestReleaseDate, v.now))))
+		}
+		if l.LicenseClass == "permissive" {
+			pos = append(pos, positive(l.License+" license allows commercial use"))
+		}
+	}
 	if !v.has("end-of-life", "deprecated-library", "runtime") {
 		pos = append(pos, positive("No end-of-life components detected"))
 	}
@@ -372,8 +435,27 @@ func (v *verdictInput) notChecked() []string {
 	return append(out, "Comparison with similar products (peer benchmarks are not available yet)")
 }
 
+// joinAnd joins items as "a, b and c".
+func joinAnd(items []string) string {
+	if len(items) < 2 {
+		return strings.Join(items, "")
+	}
+	return strings.Join(items[:len(items)-1], ", ") + " and " + items[len(items)-1]
+}
+
+// sourceName shortens a date source URL to its path.
+func sourceName(src string) string {
+	if p := strings.TrimPrefix(pathOf(src), " ("); p != "" {
+		return strings.TrimSuffix(p, ")")
+	}
+	if strings.Contains(src, "://") {
+		return "front page"
+	}
+	return src
+}
+
 // relevant reports whether a not-applicable capability is worth naming in
 // the verdict (one a buyer would expect to have run).
 func relevant(id string) bool {
-	return id == "ai-signals" || id == "commerce" || id == "vulns" || id == "dependencies"
+	return id == "ai-signals" || id == "commerce" || id == "vulns" || id == "dependencies" || id == "longevity" || id == "completeness"
 }
