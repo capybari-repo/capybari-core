@@ -83,9 +83,10 @@ const (
 type ScoreComponent struct {
 	ID       string  `json:"id"`
 	Name     string  `json:"name"`
-	Points   float64 `json:"points"`   // penalty points contributed (after the group cap)
-	Findings int     `json:"findings"` // findings in this group
-	Assessed bool    `json:"assessed"` // false when no capability covering the group ran
+	Points   float64 `json:"points"`        // penalty points (meters) or points earned (Build Depth)
+	Max      float64 `json:"max,omitempty"` // points available, for scores that earn points
+	Findings int     `json:"findings"`      // findings in this group
+	Assessed bool    `json:"assessed"`      // false when no capability covering the group ran
 	// FindingIDs lists the findings counted in this group (for drill-down).
 	FindingIDs []string `json:"finding_ids,omitempty"`
 }

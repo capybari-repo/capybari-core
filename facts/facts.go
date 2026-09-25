@@ -17,6 +17,7 @@ const (
 	KeyArchitecture = "architecture"
 	KeyCodeHealth   = "code-health"
 	KeyWebSnapshot  = "web-snapshot"
+	KeySiteDepth    = "site-depth"
 )
 
 // FileKind classifies a file in the repository inventory.
@@ -342,4 +343,24 @@ func PathContext(p string) Context {
 		}
 	}
 	return ContextProduction
+}
+
+// SiteDepth records how much care went into a website, measured only from
+// the pages already fetched. It feeds the Build Depth score: AI use is fine,
+// and a carefully built AI-assisted site should read differently from one
+// generated in a few prompts.
+type SiteDepth struct {
+	Pages  int          `json:"pages"`
+	Words  int          `json:"words"`
+	Checks []DepthCheck `json:"checks"`
+}
+
+// DepthCheck is one sign of effort. Earned is between 0 and Max.
+type DepthCheck struct {
+	ID     string  `json:"id"`
+	Group  string  `json:"group"`
+	Name   string  `json:"name"`
+	Earned float64 `json:"earned"`
+	Max    float64 `json:"max"`
+	Detail string  `json:"detail,omitempty"`
 }

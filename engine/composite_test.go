@@ -8,6 +8,7 @@ import (
 
 	"github.com/capybari-repo/capybari-core/analyzer"
 	"github.com/capybari-repo/capybari-core/engine"
+	"github.com/capybari-repo/capybari-core/facts"
 	"github.com/capybari-repo/capybari-core/finding"
 	"github.com/capybari-repo/capybari-core/report"
 	"github.com/capybari-repo/capybari-schemas"
@@ -94,5 +95,41 @@ func TestAISlopCleanAndNotAssessable(t *testing.T) {
 	r, _, _ = newEngine(t, engine.Config{}, declines).Analyze(context.Background(), repo, engine.Selection{}, nil)
 	if s := slopOf(r); s != nil {
 		t.Fatalf("slop must not be scored when ai-signals is not assessable: %+v", s)
+	}
+}
+
+func TestBuildDepthComposite(t *testing.T) {
+	ai := &fake{c: capOf("ai-signals", func(c *analyzer.Capability) { c.Provides = []string{facts.KeySiteDepth} }),
+		run: func(*analyzer.Input) (*analyzer.Result, error) {
+			return &analyzer.Result{Evidence: map[string]any{facts.KeySiteDepth: facts.SiteDepth{Pages: 3, Words: 900, Checks: []facts.DepthCheck{
+				{ID: "content-pages", Group: "breadth", Name: "content pages", Earned: 12, Max: 15},
+				{ID: "title", Group: "finish", Name: "real page titles", Earned: 4, Max: 4},
+				{ID: "description", Group: "finish", Name: "meta description", Earned: 0, Max: 4},
+				{ID: "privacy", Group: "trust", Name: "privacy or terms page", Earned: 4, Max: 4},
+			}}}}, nil
+		}}
+	r, _, err := newEngine(t, engine.Config{}, ai).Analyze(context.Background(), repo, engine.Selection{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var d *report.Score
+	for i := range r.Scores {
+		if r.Scores[i].ID == engine.BuildDepthID {
+			d = &r.Scores[i]
+		}
+	}
+	if d == nil || d.Value != 20 || d.Label != "Shallow build" || d.IsHigherWorse() || len(d.Components) != 3 {
+		t.Fatalf("build depth: %+v", d)
+	}
+	if c := d.Components[1]; c.ID != "finish" || c.Points != 4 || c.Max != 8 {
+		t.Fatalf("finish component: %+v", c)
+	}
+	if !strings.Contains(strings.Join(d.Basis, "|"), "Finishing touches 4/8: has real page titles; missing or partial: meta description") {
+		t.Fatalf("basis: %v", d.Basis)
+	}
+	var buf bytes.Buffer
+	report.WriteJSON(&buf, r)
+	if err := schemas.Validate("report.schema.json", buf.Bytes()); err != nil {
+		t.Fatalf("schema: %v", err)
 	}
 }

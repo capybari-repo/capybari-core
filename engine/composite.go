@@ -55,7 +55,7 @@ var slopGroups = []slopGroup{
 		weights: map[string]float64{
 			"secret": 1, "committed-env-file": 1, "exposure": 1, "malicious-package": 1,
 			"https": 0.5, "tls": 0.5, "mixed-content": 0.5,
-			"vulnerable-library": 0.3, "cookie": 0.3, "vulnerability": 0.15, "security-header": 0.1, "sri": 0.1,
+			"vulnerable-library": 0.3, "cookie": 0.3, "vulnerability": 0.15, "security-header": 0.05, "sri": 0.1,
 		},
 		covers: map[analyzer.TargetKind][]string{
 			analyzer.TargetWebsite: {"web-security", "web-tech"}, analyzer.TargetRepository: {"secrets", "vulns"},

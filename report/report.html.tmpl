@@ -51,9 +51,9 @@ footer{margin-top:48px;color:var(--muted);font-size:12.5px}
 <h2>Scores <span class="pill">health: 100 = best · AI Slop: 100 = most slop</span></h2>
 <div class="grid">
 {{range .Scores}}<a class="card score" href="#dim-{{.ID}}" title="{{.Summary}}">
-<div class="n">{{.Name}}</div><div class="v {{.Rating}}">{{.Value}}<span class="muted" style="font-size:15px">/100</span></div>{{if .IsHigherWorse}}<div class="s"><strong class="{{.Rating}}">{{.Label}}</strong> · higher = more slop</div>{{end}}
+<div class="n">{{.Name}}</div><div class="v {{.Rating}}">{{.Value}}<span class="muted" style="font-size:15px">/100</span></div>{{if .IsHigherWorse}}<div class="s"><strong class="{{.Rating}}">{{.Label}}</strong> · higher = more slop</div>{{else if .Label}}<div class="s"><strong class="{{.Rating}}">{{.Label}}</strong> · higher = more care</div>{{end}}
 <div class="bar"><i class="bg-{{.Rating}}" style="width:{{.Value}}%"></i></div>
-<div class="s">{{.Rating}} · {{.Confidence}} confidence</div><div class="s">{{.Summary}}</div>{{range .Components}}<div class="s">{{.Name}}: {{if .Assessed}}{{.Findings}} finding(s){{else}}not assessed{{end}}</div>{{end}}{{if not .Components}}{{range .Basis}}<div class="s">Checked: {{.}}</div>{{end}}{{end}}</a>
+<div class="s">{{.Rating}} · {{.Confidence}} confidence</div><div class="s">{{.Summary}}</div>{{range .Components}}<div class="s">{{.Name}}: {{if .Max}}{{printf "%.0f" .Points}}/{{printf "%.0f" .Max}}{{else if .Assessed}}{{.Findings}} finding(s){{else}}not assessed{{end}}</div>{{end}}{{if not .Components}}{{range .Basis}}<div class="s">Checked: {{.}}</div>{{end}}{{end}}</a>
 {{end}}
 </div>
 {{end}}
