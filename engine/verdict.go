@@ -265,13 +265,6 @@ func (v *verdictInput) finish() report.VerdictAxis {
 		return a
 	}
 	rs, blocks, support, _ := v.concerns(report.AxisFinish)
-	// Name the scores when they, rather than a single finding, set the level.
-	if hasSlop && slop.Value >= 20 {
-		rs = append(rs, report.VerdictReason{Text: fmt.Sprintf("Unfinished Risk %d/100 (%s)", slop.Value, slop.Label), Kind: "concern", Impact: finding.BuyerSupportCost})
-	}
-	if hasDepth && depth.Value < 65 {
-		rs = append(rs, report.VerdictReason{Text: fmt.Sprintf("Looks Shipped %d/100 (%s)", depth.Value, depth.Label), Kind: "concern", Impact: finding.BuyerSupportCost})
-	}
 	if v.depth != nil {
 		var missing []string
 		for _, c := range v.depth.Checks {
@@ -285,6 +278,13 @@ func (v *verdictInput) finish() report.VerdictAxis {
 			}
 			rs = append(rs, report.VerdictReason{Text: "Not yet in place: " + strings.Join(missing, ", "), Kind: "concern", Impact: finding.BuyerCosmetic})
 		}
+	}
+	// Name the scores when they, rather than a single finding, set the level.
+	if hasSlop && slop.Value >= 20 {
+		rs = append(rs, report.VerdictReason{Text: fmt.Sprintf("Unfinished Risk %d/100 (%s)", slop.Value, slop.Label), Kind: "concern", Impact: finding.BuyerSupportCost})
+	}
+	if hasDepth && depth.Value < 65 {
+		rs = append(rs, report.VerdictReason{Text: fmt.Sprintf("Looks Shipped %d/100 (%s)", depth.Value, depth.Label), Kind: "concern", Impact: finding.BuyerSupportCost})
 	}
 	var pos []report.VerdictReason
 	if v.depth != nil {
