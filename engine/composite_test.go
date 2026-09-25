@@ -54,7 +54,7 @@ func TestAISlopComposite(t *testing.T) {
 	}
 	// placeholders 12×2 = 24; scaffold 2.8×1.5 = 4.2; secrets 150 capped at 30
 	// total 58.2 -> 100*58.2/98.2 = 59
-	if s.Value != 59 || s.Label != "High slop" || s.Rating != "poor" || !s.IsHigherWorse() {
+	if s.Value != 59 || s.Label != "High unfinished risk" || s.Rating != "poor" || !s.IsHigherWorse() {
 		t.Fatalf("slop = %+v", s)
 	}
 	byID := map[string]report.ScoreComponent{}
@@ -79,7 +79,7 @@ func TestAISlopComposite(t *testing.T) {
 	for _, f := range []string{"md", "html"} {
 		buf.Reset()
 		report.Write(&buf, r, f)
-		if !strings.Contains(buf.String(), "higher = more slop") {
+		if !strings.Contains(buf.String(), "higher = riskier") {
 			t.Fatalf("%s report does not explain the slop direction", f)
 		}
 	}
@@ -88,7 +88,7 @@ func TestAISlopComposite(t *testing.T) {
 func TestAISlopCleanAndNotAssessable(t *testing.T) {
 	ai := &fake{c: capOf("ai-signals")}
 	r, _, _ := newEngine(t, engine.Config{}, ai).Analyze(context.Background(), repo, engine.Selection{}, nil)
-	if s := slopOf(r); s == nil || s.Value != 0 || s.Label != "Low slop" || s.Rating != "good" {
+	if s := slopOf(r); s == nil || s.Value != 0 || s.Label != "Low unfinished risk" || s.Rating != "good" {
 		t.Fatalf("clean: %+v", s)
 	}
 	declines := applicableFake{&fake{c: capOf("ai-signals"), applies: func(*analyzer.Input) (bool, string) { return false, "not enough content" }}}
@@ -118,7 +118,7 @@ func TestBuildDepthComposite(t *testing.T) {
 			d = &r.Scores[i]
 		}
 	}
-	if d == nil || d.Value != 20 || d.Label != "Shallow build" || d.IsHigherWorse() || len(d.Components) != 3 {
+	if d == nil || d.Value != 20 || d.Label != "Thin build" || d.IsHigherWorse() || len(d.Components) != 3 {
 		t.Fatalf("build depth: %+v", d)
 	}
 	if c := d.Components[1]; c.ID != "finish" || c.Points != 4 || c.Max != 8 {

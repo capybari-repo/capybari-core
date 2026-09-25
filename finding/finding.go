@@ -87,6 +87,7 @@ const (
 	DimOperability     = "operability"
 	DimEvolution       = "evolution"
 	DimAISignals       = "ai-signals"
+	DimTrust           = "trust"
 )
 
 // Dimensions lists every known dimension.
@@ -131,7 +132,24 @@ type Rule struct {
 type Impact struct {
 	Technical string `json:"technical,omitempty"`
 	Business  string `json:"business,omitempty"`
+	// Buyer says what the finding means to someone deciding whether to
+	// trust, use or pay for the product (see the Buyer* constants). The
+	// engine sets it when the analyzer did not.
+	Buyer string `json:"buyer,omitempty"`
 }
+
+// Buyer impact levels.
+const (
+	// BuyerBlocks: a reason not to trust the product with data, money or an
+	// account until it is fixed (no HTTPS, leaked keys, vulnerable code).
+	BuyerBlocks = "blocks-purchase"
+	// BuyerSupportCost: the product works but will cost its users time or
+	// money (missing contact or refund path, end-of-life stack, no tests).
+	BuyerSupportCost = "support-cost"
+	// BuyerCosmetic: owner homework that does not change a buyer's decision
+	// (a missing security header, version disclosure).
+	BuyerCosmetic = "cosmetic"
+)
 
 // Remediation describes what to do about a finding.
 type Remediation struct {

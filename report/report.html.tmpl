@@ -36,6 +36,9 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}th,td{text-align:left
 .tablewrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px}
 .muted{color:var(--muted)}.pill{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:0 7px;color:var(--muted)}
 .boundary{border-left:4px solid var(--accent);background:var(--accent-bg)}
+.verdict{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}.verdict .q{color:var(--muted);font-size:12.5px}
+.verdict .l{font-size:20px;font-weight:700;margin:2px 0 8px}.verdict ul{margin:0;padding-left:0;list-style:none}.verdict li{margin:4px 0;font-size:13.5px}
+.unknown{color:var(--muted)}.imp{font-size:11px;border-radius:999px;padding:0 7px;border:1px solid var(--line)}.imp-blocks-purchase{color:var(--poor);border-color:var(--poor)}.imp-support-cost{color:var(--fair)}
 footer{margin-top:48px;color:var(--muted);font-size:12.5px}
 </style>
 </head>
@@ -47,11 +50,20 @@ footer{margin-top:48px;color:var(--muted);font-size:12.5px}
 <div class="meta"><span>{{.Scan.Target.Kind}} · <code>{{.Scan.Target.Input}}</code></span><span>{{.Scan.FinishedAt.Format "2006-01-02 15:04 MST"}}</span><span>{{seconds .Scan.DurationMS}}</span><span>{{if .Scan.Mode.Offline}}offline{{else}}online{{end}}{{if .Scan.Mode.Active}} · active probes{{end}}</span><span>{{.Tool.Name}} {{.Tool.Version}}</span></div>
 </header>
 
+{{with .Verdict}}
+<section><h2>Verdict: {{.Headline}}</h2>
+<div class="verdict">{{range .Axes}}<div class="card"><div class="q">{{.Name}} · {{.Question}}</div><div class="l {{.Rating}}">{{.Label}}</div>
+<ul>{{range .Reasons}}<li>{{mark .}} {{if .FindingID}}<a href="#f-{{.FindingID}}">{{.Text}}</a>{{else}}{{.Text}}{{end}}</li>{{end}}</ul></div>{{end}}</div>
+<p class="muted">For buyers: <strong>{{index .Impact "blocks-purchase"}}</strong> block purchase · <strong>{{index .Impact "support-cost"}}</strong> raise support cost · <strong>{{index .Impact "cosmetic"}}</strong> cosmetic (owner homework).</p>
+{{if .NotChecked}}<p class="muted"><strong>Not checked:</strong> {{join .NotChecked " · "}}</p>{{end}}
+<p class="muted"><em>{{.Disclaimer}}</em></p></section>
+{{end}}
+
 {{if .Scores}}
-<h2>Scores <span class="pill">health: 100 = best · AI Slop: 100 = most slop</span></h2>
+<h2>Scores <span class="pill">health: 100 = best · Unfinished Risk: 100 = riskiest</span></h2>
 <div class="grid">
 {{range .Scores}}<a class="card score" href="#dim-{{.ID}}" title="{{.Summary}}">
-<div class="n">{{.Name}}</div><div class="v {{.Rating}}">{{.Value}}<span class="muted" style="font-size:15px">/100</span></div>{{if .IsHigherWorse}}<div class="s"><strong class="{{.Rating}}">{{.Label}}</strong> · higher = more slop</div>{{else if .Label}}<div class="s"><strong class="{{.Rating}}">{{.Label}}</strong> · higher = more care</div>{{end}}
+<div class="n">{{.Name}}</div><div class="v {{.Rating}}">{{.Value}}<span class="muted" style="font-size:15px">/100</span></div>{{if .IsHigherWorse}}<div class="s"><strong class="{{.Rating}}">{{.Label}}</strong> · higher = riskier</div>{{else if .Label}}<div class="s"><strong class="{{.Rating}}">{{.Label}}</strong> · higher = more finished</div>{{end}}
 <div class="bar"><i class="bg-{{.Rating}}" style="width:{{.Value}}%"></i></div>
 <div class="s">{{.Rating}} · {{.Confidence}} confidence</div><div class="s">{{.Summary}}</div>{{range .Components}}<div class="s">{{.Name}}: {{if .Max}}{{printf "%.0f" .Points}}/{{printf "%.0f" .Max}}{{else if .Assessed}}{{.Findings}} finding(s){{else}}not assessed{{end}}</div>{{end}}{{if not .Components}}{{range .Basis}}<div class="s">Checked: {{.}}</div>{{end}}{{end}}</a>
 {{end}}
@@ -83,7 +95,7 @@ footer{margin-top:48px;color:var(--muted);font-size:12.5px}
 <p class="counts"><span class="poor">{{sevcount .Summary.Counts "critical"}} critical</span><span style="color:var(--high)">{{sevcount .Summary.Counts "high"}} high</span><span class="fair">{{sevcount .Summary.Counts "medium"}} medium</span><span style="color:var(--low)">{{sevcount .Summary.Counts "low"}} low</span><span class="muted">{{sevcount .Summary.Counts "info"}} info</span></p>
 {{if not .Findings}}<div class="card">No findings.</div>{{end}}
 {{range $i, $f := .Findings}}
-<details class="f" id="f-{{$f.ID}}"{{if lt $i 3}} open{{end}}><summary><span class="sev sev-{{$f.Severity}}">{{$f.Severity}}</span><span class="t">{{if eq $f.BaselineState "new"}}<span class="new">NEW </span>{{end}}{{$f.Title}}</span><span class="c"{{with index $.DimAnchor $f.ID}} id="dim-{{.}}"{{end}}>{{$f.Dimension}} · {{$f.Confidence}} confidence · {{$f.Source.Capability}}</span></summary>
+<details class="f" id="f-{{$f.ID}}"{{if lt $i 3}} open{{end}}><summary><span class="sev sev-{{$f.Severity}}">{{$f.Severity}}</span>{{with $f.Impact}}{{if .Buyer}}<span class="imp imp-{{.Buyer}}">{{impact .Buyer}}</span>{{end}}{{end}}<span class="t">{{if eq $f.BaselineState "new"}}<span class="new">NEW </span>{{end}}{{$f.Title}}</span><span class="c"{{with index $.DimAnchor $f.ID}} id="dim-{{.}}"{{end}}>{{$f.Dimension}} · {{$f.Confidence}} confidence · {{$f.Source.Capability}}</span></summary>
 <div class="body">
 {{if $f.Description}}<p class="desc">{{$f.Description}}</p>{{end}}
 {{range $j, $e := $f.Evidence}}{{if lt $j 8}}<p><code>{{loc $e}}</code>{{if $e.Detail}} — {{$e.Detail}}{{end}}</p>{{if $e.Snippet}}<pre>{{$e.Snippet}}</pre>{{end}}{{end}}{{end}}

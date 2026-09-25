@@ -11,7 +11,8 @@ import (
 	"github.com/capybari-repo/capybari-core/report"
 )
 
-// The AI Slop Score answers one question: does this look like AI-generated
+// The Unfinished Risk score (formerly the AI Slop Score; the ID stays
+// "ai-slop") answers one question: does this look like AI-generated
 // software (or content) that nobody properly reviewed? It is a composite of
 // evidence produced by several capabilities, grouped so that no single area
 // dominates. It is a meter: 0 = clean, 100 = pure slop.
@@ -19,7 +20,7 @@ import (
 // Documented in capybari-docs/methodology/scoring.md#ai-slop. Changing the
 // groups, weights or caps is a methodology change.
 
-// AISlopID is the score ID of the AI Slop Score.
+// AISlopID is the score ID of the Unfinished Risk score.
 const AISlopID = "ai-slop"
 
 // slopHalfPoint is the total penalty at which the meter reads 50.
@@ -81,11 +82,11 @@ var slopGroups = []slopGroup{
 func SlopLabel(v int) (label, rating string) {
 	switch {
 	case v < 20:
-		return "Low slop", "good"
+		return "Low unfinished risk", "good"
 	case v < 50:
-		return "Moderate slop", "fair"
+		return "Moderate unfinished risk", "fair"
 	}
-	return "High slop", "poor"
+	return "High unfinished risk", "poor"
 }
 
 // aiSlop computes the composite, or nil when it cannot be assessed: the
@@ -159,7 +160,7 @@ func (e *Engine) aiSlop(st *State, fs []finding.Finding) *report.Score {
 	sort.Strings(ids)
 	summary := fmt.Sprintf("%s: indicators of unreviewed AI-generated work across %d group(s)", label, len(comps)-len(notAssessed))
 	return &report.Score{
-		ID: AISlopID, Name: "AI Slop Score", Value: value, Rating: rating, Label: label,
+		ID: AISlopID, Name: "Unfinished Risk", Value: value, Rating: rating, Label: label,
 		Direction: report.HigherIsWorse, Confidence: conf, Summary: summary, Counts: counts,
 		Capabilities: ids, Basis: basis, Components: comps,
 		Methodology: MethodologyBase + "#ai-slop",

@@ -38,6 +38,7 @@ var dimensionNames = map[string]string{
 	finding.DimOperability:     "Operability",
 	finding.DimEvolution:       "Technology Currency",
 	finding.DimAISignals:       "AI Dependability",
+	finding.DimTrust:           "Trust & Commerce",
 }
 
 // DimensionName returns the display name of a scored dimension.
@@ -91,7 +92,9 @@ func (e *Engine) Report(st *State) *report.Report {
 		r.Facts[k] = publicFact(k, raw)
 	}
 
+	tagBuyerImpact(r.Findings)
 	r.Scores = e.scores(st, r.Findings)
+	r.Verdict = e.verdict(st, r.Findings, r.Scores)
 	r.Recommendations = e.recommend(st, r.Findings)
 	r.Summary = summarize(st, r)
 	r.DataBoundary = e.dataBoundary(st)

@@ -18,6 +18,7 @@ const (
 	KeyCodeHealth   = "code-health"
 	KeyWebSnapshot  = "web-snapshot"
 	KeySiteDepth    = "site-depth"
+	KeyCommerce     = "commerce"
 )
 
 // FileKind classifies a file in the repository inventory.
@@ -363,4 +364,29 @@ type DepthCheck struct {
 	Earned float64 `json:"earned"`
 	Max    float64 `json:"max"`
 	Detail string  `json:"detail,omitempty"`
+}
+
+// Commerce records what a visitor can see about buying from and trusting a
+// website: payment providers, account and checkout entry points, pricing,
+// and legal and contact paths. Read from already-fetched pages only.
+type Commerce struct {
+	PaymentProviders []string `json:"payment_providers,omitempty"`
+	// Stores are app stores and marketplaces the product is sold through
+	// (App Store, Google Play, Steam…); they handle payment and refunds.
+	Stores []string `json:"stores,omitempty"`
+	Login            bool     `json:"login"`
+	Signup           bool     `json:"signup"`
+	Checkout         bool     `json:"checkout"`
+	// Sells is true when the site takes money or accounts: a payment
+	// provider, checkout, prices, or a login/sign-up.
+	Sells bool `json:"sells"`
+	// Pricing is the pricing page (or "front page"); PricesShown says
+	// whether any price was visible on it.
+	Pricing     string `json:"pricing,omitempty"`
+	PricesShown bool   `json:"prices_shown"`
+	Privacy     string `json:"privacy,omitempty"`
+	Terms       string `json:"terms,omitempty"`
+	Refund      string `json:"refund,omitempty"`
+	Contact     string `json:"contact,omitempty"`
+	ComingSoon  bool   `json:"coming_soon"`
 }

@@ -11,7 +11,8 @@ import (
 	"github.com/capybari-repo/capybari-core/report"
 )
 
-// The Build Depth score is the counterpart of the AI Slop Score: instead of
+// The Looks Shipped score (ID "build-depth") is the counterpart of
+// Unfinished Risk: instead of
 // counting what is wrong, it credits signs of effort (several real pages,
 // specific facts, finished metadata, trust pages, extra craft). AI use is
 // not penalised; a carefully built AI-assisted site scores high, a site
@@ -19,7 +20,7 @@ import (
 //
 // Documented in capybari-docs/methodology/scoring.md#build-depth.
 
-// BuildDepthID is the score ID of the Build Depth score.
+// BuildDepthID is the score ID of the Looks Shipped score.
 const BuildDepthID = "build-depth"
 
 // depthGroups lists the groups in display order with their names.
@@ -32,15 +33,15 @@ var depthGroups = []struct{ id, name string }{
 	{"craft", "Extra craft"},
 }
 
-// DepthLabel converts a Build Depth value to a label and rating.
+// DepthLabel converts a Looks Shipped value to a label and rating.
 func DepthLabel(v int) (label, rating string) {
 	switch {
 	case v < 35:
-		return "Shallow build", "poor"
+		return "Thin build", "poor"
 	case v < 65:
-		return "Moderate depth", "fair"
+		return "Partly shipped", "fair"
 	}
-	return "Deep build", "good"
+	return "Looks shipped", "good"
 }
 
 func (e *Engine) buildDepth(st *State) *report.Score {
@@ -95,7 +96,7 @@ func (e *Engine) buildDepth(st *State) *report.Score {
 	value := int(math.Round(math.Min(100, total)))
 	label, rating := DepthLabel(value)
 	return &report.Score{
-		ID: BuildDepthID, Name: "Build Depth", Value: value, Rating: rating, Label: label,
+		ID: BuildDepthID, Name: "Looks Shipped", Value: value, Rating: rating, Label: label,
 		Direction: report.HigherIsBetter, Confidence: finding.ConfidenceLow,
 		Summary:      fmt.Sprintf("%s: signs of effort across %d page(s) and %d words; AI use itself is not penalised", label, d.Pages, d.Words),
 		Counts:       finding.Counts(nil),

@@ -22,6 +22,8 @@ var htmlTmpl = template.Must(template.New("report").Funcs(template.FuncMap{
 	"seconds":  func(ms int64) string { return fmt.Sprintf("%.1fs", float64(ms)/1000) },
 	"add":      func(a, b int) int { return a + b },
 	"top":      func(n int, rs []Recommendation) []Recommendation { return rs[:min(n, len(rs))] },
+	"mark":     reasonMark,
+	"impact":   ImpactLabel,
 }).Parse(htmlTemplate))
 
 type htmlView struct {

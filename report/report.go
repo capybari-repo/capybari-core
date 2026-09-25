@@ -74,7 +74,7 @@ type CapabilityRun struct {
 const (
 	// HigherIsBetter is the default for dimension scores: 0 = worst, 100 = best.
 	HigherIsBetter = "higher-is-better"
-	// HigherIsWorse is used by meters such as the AI Slop Score:
+	// HigherIsWorse is used by meters such as Unfinished Risk:
 	// 0 = clean, 100 = worst.
 	HigherIsWorse = "higher-is-worse"
 )
@@ -83,7 +83,7 @@ const (
 type ScoreComponent struct {
 	ID       string  `json:"id"`
 	Name     string  `json:"name"`
-	Points   float64 `json:"points"`        // penalty points (meters) or points earned (Build Depth)
+	Points   float64 `json:"points"`        // penalty points (meters) or points earned (Looks Shipped)
 	Max      float64 `json:"max,omitempty"` // points available, for scores that earn points
 	Findings int     `json:"findings"`      // findings in this group
 	Assessed bool    `json:"assessed"`      // false when no capability covering the group ran
@@ -92,8 +92,8 @@ type ScoreComponent struct {
 }
 
 // Score is one score. Dimension scores run 0 = worst, 100 = best; meters
-// such as the AI Slop Score declare Direction "higher-is-worse". Rating is
-// always from the reader's point of view (good = healthy / little slop).
+// such as Unfinished Risk declare Direction "higher-is-worse". Rating is
+// always from the reader's point of view (good = healthy / little unfinished risk).
 type Score struct {
 	ID           string                   `json:"id"`
 	Name         string                   `json:"name"`
@@ -109,7 +109,7 @@ type Score struct {
 	Methodology string   `json:"methodology"`
 	// Direction is empty (= higher-is-better) for dimension scores.
 	Direction string `json:"direction,omitempty"`
-	// Label is a plain-language level, e.g. "Moderate slop".
+	// Label is a plain-language level, e.g. "Moderate unfinished risk".
 	Label string `json:"label,omitempty"`
 	// Components break a composite score down by evidence group.
 	Components []ScoreComponent `json:"components,omitempty"`
@@ -168,10 +168,13 @@ type Summary struct {
 
 // Report is the unified Source Intelligence report.
 type Report struct {
-	SchemaVersion   string                     `json:"schema_version"`
-	Tool            Tool                       `json:"tool"`
-	Scan            Scan                       `json:"scan"`
-	Summary         Summary                    `json:"summary"`
+	SchemaVersion string  `json:"schema_version"`
+	Tool          Tool    `json:"tool"`
+	Scan          Scan    `json:"scan"`
+	Summary       Summary `json:"summary"`
+	// Verdict is the buyer's summary: trust, finish and risk, with the
+	// reasons behind each and what was not checked. Shown first.
+	Verdict         *Verdict                   `json:"verdict,omitempty"`
 	Scores          []Score                    `json:"scores"`
 	Findings        []finding.Finding          `json:"findings"`
 	Facts           map[string]json.RawMessage `json:"facts"`
@@ -226,4 +229,49 @@ func Rating(v int) string {
 	default:
 		return "poor"
 	}
+}
+
+// Verdict answers the questions a buyer asks before trusting, using or
+// paying for a product. It reports what was observed, never a
+// recommendation: every level comes with its reasons and what was not
+// checked.
+type Verdict struct {
+	// Headline joins the axis labels, e.g. "No trust blockers · Partly
+	// finished · Low regret risk".
+	Headline string        `json:"headline"`
+	Axes     []VerdictAxis `json:"axes"`
+	// Impact counts findings by buyer impact (blocks-purchase,
+	// support-cost, cosmetic).
+	Impact     map[string]int `json:"impact"`
+	NotChecked []string       `json:"not_checked"`
+	Disclaimer string         `json:"disclaimer"`
+}
+
+// Verdict axis IDs.
+const (
+	AxisTrust  = "trust"
+	AxisFinish = "finish"
+	AxisRisk   = "risk"
+)
+
+// VerdictAxis is one buyer question.
+type VerdictAxis struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Question string `json:"question"`
+	Label    string `json:"label"`
+	// Rating is good, fair, poor, or unknown when nothing covering the
+	// question ran.
+	Rating  string          `json:"rating"`
+	Reasons []VerdictReason `json:"reasons"`
+}
+
+// VerdictReason is one concern or positive behind an axis level.
+type VerdictReason struct {
+	Text string `json:"text"`
+	// Kind is "concern" or "positive".
+	Kind string `json:"kind"`
+	// Impact is the buyer impact of a concern.
+	Impact    string `json:"impact,omitempty"`
+	FindingID string `json:"finding_id,omitempty"`
 }

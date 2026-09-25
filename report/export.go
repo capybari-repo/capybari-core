@@ -12,7 +12,7 @@ import (
 )
 
 // Formats supported by Write.
-var Formats = []string{"json", "md", "html", "sarif"}
+var Formats = []string{"json", "md", "html", "sarif", "brief"}
 
 // Extension returns the file extension for a format.
 func Extension(format string) string {
@@ -23,6 +23,8 @@ func Extension(format string) string {
 		return ".html"
 	case "sarif":
 		return ".sarif"
+	case "brief":
+		return ".brief.md"
 	}
 	return ".json"
 }
@@ -38,6 +40,8 @@ func Write(w io.Writer, r *Report, format string) error {
 		return WriteHTML(w, r)
 	case "sarif":
 		return WriteSARIF(w, r)
+	case "brief":
+		return WriteBrief(w, r)
 	}
 	return fmt.Errorf("unknown format %q (want %s)", format, strings.Join(Formats, ", "))
 }
@@ -95,14 +99,20 @@ func WriteMarkdown(w io.Writer, r *Report) error {
 	}
 	p("\n\n")
 
+	if r.Verdict != nil {
+		p("## Verdict: %s\n\n", r.Verdict.Headline)
+		writeVerdict(b, r.Verdict, 0)
+		p("_%s_\n\n", r.Verdict.Disclaimer)
+	}
+
 	if len(r.Scores) > 0 {
-		p("## Scores\n\n_Health scores: 0 = worst, 100 = best. The AI Slop Score is a meter: 0 = clean, 100 = pure slop (higher is worse). Build Depth credits signs of effort: 0 = shallow, 100 = deep (higher is better)._\n\n| Score | Value | Rating | Confidence | Summary |\n|---|---:|---|---|---|\n")
+		p("## Scores\n\n_Health scores: 0 = worst, 100 = best. Unfinished Risk (the AI slop meter) runs the other way: 0 = clean, 100 = unreviewed and unfinished (higher is worse). Looks Shipped credits signs of a finished product (higher is better)._\n\n| Score | Value | Rating | Confidence | Summary |\n|---|---:|---|---|---|\n")
 		for _, s := range r.Scores {
 			rating := s.Rating
 			if s.IsHigherWorse() {
-				rating = s.Label + " (higher = more slop)"
+				rating = s.Label + " (higher = riskier)"
 			} else if s.Label != "" {
-				rating = s.Label + " (higher = more care)"
+				rating = s.Label + " (higher = more finished)"
 			}
 			p("| %s | **%d** | %s | %s | %s |\n", s.Name, s.Value, rating, s.Confidence, mdEscape(s.Summary))
 		}
@@ -140,7 +150,7 @@ func WriteMarkdown(w io.Writer, r *Report) error {
 	if len(r.Findings) == 0 {
 		p("No findings.\n\n")
 	} else {
-		p("| Severity | Confidence | Dimension | Finding | Location | Capability |\n|---|---|---|---|---|---|\n")
+		p("| Severity | For buyers | Confidence | Dimension | Finding | Location | Capability |\n|---|---|---|---|---|---|---|\n")
 		for _, f := range r.Findings {
 			loc := ""
 			if len(f.Evidence) > 0 {
@@ -153,7 +163,11 @@ func WriteMarkdown(w io.Writer, r *Report) error {
 			if f.BaselineState == finding.BaselineNew {
 				title = "🆕 " + title
 			}
-			p("| %s | %s | %s | %s | %s | %s |\n", f.Severity, f.Confidence, f.Dimension, title, loc, f.Source.Capability)
+			buyer := ""
+			if f.Impact != nil {
+				buyer = ImpactLabel(f.Impact.Buyer)
+			}
+			p("| %s | %s | %s | %s | %s | %s | %s |\n", f.Severity, buyer, f.Confidence, f.Dimension, title, loc, f.Source.Capability)
 		}
 		p("\n")
 		p("### Details\n\n")
