@@ -394,20 +394,7 @@ func (e *Engine) trustScore(st *State, fs []finding.Finding, scores []report.Sco
 				case content == 2:
 					add("coverage", "", "Only 2 public pages with real content to judge", 3, "")
 				}
-				if ws.Rendered {
-					add("coverage", "", "Content only appears after running JavaScript", 3, "")
-				}
-			}
-		}
-		if t := fact[facts.Technologies](st, facts.KeyTechnologies); t != nil {
-			high := 0
-			for _, it := range t.Items {
-				if it.Confidence == "high" {
-					high++
-				}
-			}
-			if high < 3 {
-				add("coverage", "", fmt.Sprintf("Limited technology fingerprint (%d identified)", high), 3, "")
+
 			}
 		}
 	} else if inv := fact[facts.Inventory](st, facts.KeyInventory); inv != nil {

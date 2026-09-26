@@ -391,6 +391,8 @@ type Commerce struct {
 	Login    bool     `json:"login"`
 	Signup   bool     `json:"signup"`
 	Checkout bool     `json:"checkout"`
+	// CheckoutLink is the link that showed a checkout or buy path.
+	CheckoutLink string `json:"checkout_link,omitempty"`
 	// Sells is true when the site takes money or accounts: a payment
 	// provider, checkout, prices, or a login/sign-up.
 	Sells bool `json:"sells"`

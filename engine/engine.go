@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"runtime/debug"
 	"slices"
 	"sort"
@@ -15,7 +16,10 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/net/publicsuffix"
+
 	"github.com/capybari-repo/capybari-core/analyzer"
+	"github.com/capybari-repo/capybari-core/facts"
 	"github.com/capybari-repo/capybari-core/finding"
 	"github.com/capybari-repo/capybari-core/netguard"
 	"github.com/capybari-repo/capybari-core/report"
@@ -346,6 +350,12 @@ func (e *Engine) runOne(ctx context.Context, st *State, a analyzer.Analyzer, rec
 		for _, h := range c.Execution.NetworkHosts {
 			if h == analyzer.TargetHost {
 				h = st.Target.Host()
+				// Sites that redirect (example.com → www.example.com) are
+				// reached at the final host too, but only within the same
+				// registered domain.
+				if final := finalHost(st); final != "" && !strings.EqualFold(final, h) && sameSite(final, h) {
+					hosts = append(hosts, final)
+				}
 			}
 			if h != "" {
 				hosts = append(hosts, h)
@@ -503,4 +513,30 @@ func normalize(c analyzer.Capability, in []finding.Finding, now time.Time) []fin
 		out = append(out, f)
 	}
 	return out
+}
+
+// finalHost is the host the Website Snapshot ended up on after redirects.
+func finalHost(st *State) string {
+	raw, ok := st.Evidence[facts.KeyWebSnapshot]
+	if !ok {
+		return ""
+	}
+	var ws struct {
+		FinalURL string `json:"final_url"`
+	}
+	if json.Unmarshal(raw, &ws) != nil {
+		return ""
+	}
+	u, err := url.Parse(ws.FinalURL)
+	if err != nil {
+		return ""
+	}
+	return u.Hostname()
+}
+
+// sameSite reports whether two hosts share a registered domain.
+func sameSite(a, b string) bool {
+	da, err1 := publicsuffix.EffectiveTLDPlusOne(strings.ToLower(a))
+	db, err2 := publicsuffix.EffectiveTLDPlusOne(strings.ToLower(b))
+	return err1 == nil && err2 == nil && da == db
 }
