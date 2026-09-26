@@ -155,6 +155,8 @@ func findingCost(f finding.Finding) (group string, pts float64, key string) {
 		return "maintenance", sev(f, 6, 6, 6, 3), ""
 	case c == "placeholder-content":
 		return "ai", 15, ""
+	case c == "demo-names":
+		return "ai", 3, ""
 	case c == "ai-boilerplate" || c == "template-leftover" || c == "scaffold-code" || c == "swallowed-errors" || c == "placeholder-config":
 		return "ai", sev(f, 15, 10, 6, 3), c
 	case c == "coming-soon":
@@ -330,7 +332,7 @@ func (e *Engine) trustScore(st *State, fs []finding.Finding, scores []report.Sco
 	if id := fact[facts.Identity](st, facts.KeyIdentity); id != nil && !id.Registered.IsZero() {
 		age := now.Sub(id.Registered)
 		days := int(age.Hours() / 24)
-		text := fmt.Sprintf("Domain only %s old (registered %s)", strings.TrimSuffix(ago(id.Registered, now), " ago"), id.Registered.Format("Jan 2006"))
+		text := fmt.Sprintf("Domain only %s old (registered %s)", ageText(id.Registered, now), id.Registered.Format("Jan 2006"))
 		if age < 30*24*time.Hour {
 			text = fmt.Sprintf("Domain only %d days old (registered %s)", days, id.Registered.Format("Jan 2006"))
 		}

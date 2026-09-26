@@ -95,6 +95,7 @@ func (e *Engine) Report(st *State) *report.Report {
 	tagBuyerImpact(r.Findings)
 	sortForBuyers(r.Findings)
 	r.Scores = e.scores(st, r.Findings)
+	r.Scores, r.NotScored = withhold(st, r.Scores)
 	r.Verdict = e.verdict(st, r.Findings, r.Scores)
 	r.Recommendations = e.recommend(st, r.Findings)
 	r.Summary = summarize(st, r)
@@ -254,13 +255,21 @@ func scoreSummary(counts map[finding.Severity]int, ran, missing []string) string
 			parts = append(parts, fmt.Sprintf("%d %s", counts[s], s))
 		}
 	}
-	msg := "No issues found"
-	if len(parts) > 0 {
-		msg = strings.Join(parts, ", ") + " finding(s)"
+	msg := "0 problems found"
+	switch len(parts) {
+	case 0:
+	case 1:
+		msg = parts[0] + " problem(s) found"
+	default:
+		msg = strings.Join(parts[:len(parts)-1], ", ") + " and " + parts[len(parts)-1] + " problems found"
 	}
-	msg += " by " + strings.Join(ran, ", ")
+	msg = strings.Replace(msg, "1 critical problem(s)", "1 critical problem", 1)
+	for _, s := range []string{"critical", "high", "medium", "low"} {
+		msg = strings.Replace(msg, "1 "+s+" problem(s)", "1 "+s+" problem", 1)
+	}
+	msg = strings.ReplaceAll(msg, "problem(s)", "problems")
 	if len(missing) > 0 {
-		msg += "; not assessed: " + strings.Join(missing, ", ")
+		msg += "; some checks could not run: " + strings.Join(missing, ", ")
 	}
 	return msg + "."
 }
@@ -374,14 +383,14 @@ func caveats(st *State, scores []report.Score) {
 		sc := &scores[i]
 		if sc.ID == finding.DimEvolution && st.Target.Kind == analyzer.TargetWebsite {
 			if t := fact[facts.Technologies](st, facts.KeyTechnologies); t != nil {
-				high := 0
+				versioned := 0
 				for _, it := range t.Items {
-					if it.Confidence == "high" {
-						high++
+					if it.Version != "" {
+						versioned++
 					}
 				}
-				if high < 3 {
-					sc.Caveat = fmt.Sprintf("Limited fingerprint: only %d technolog%s identified with confidence", high, map[bool]string{true: "y", false: "ies"}[high == 1])
+				if versioned < 3 {
+					sc.Caveat = fmt.Sprintf("Based on only %d technolog%s with a visible version; the rest of the stack cannot be seen from outside", versioned, map[bool]string{true: "y", false: "ies"}[versioned == 1])
 					sc.Confidence = finding.ConfidenceLow
 				}
 			}
@@ -390,4 +399,41 @@ func caveats(st *State, scores []report.Score) {
 			sc.Caveat = "Low confidence: limited evidence behind this score"
 		}
 	}
+}
+
+// withhold removes scores that would be judged on no evidence. A website's
+// Technology Currency can only be judged from technologies whose version is
+// visible; when none is (and nothing outdated was found), a 100 would only
+// mean "nothing could be checked", so the score is withheld with a reason.
+func withhold(st *State, scores []report.Score) ([]report.Score, []report.NotScored) {
+	var keep []report.Score
+	var out []report.NotScored
+	for _, sc := range scores {
+		if sc.ID == finding.DimEvolution && st.Target.Kind == analyzer.TargetWebsite && sc.Value == 100 {
+			if t := fact[facts.Technologies](st, facts.KeyTechnologies); t != nil {
+				var names []string
+				versioned := 0
+				for _, it := range t.Items {
+					names = append(names, it.Name)
+					if it.Version != "" {
+						versioned++
+					}
+				}
+				if versioned == 0 {
+					reason := "No technology could be identified from outside, so there is nothing to check for being outdated."
+					if len(names) > 0 {
+						one := len(names) == 1
+						reason = fmt.Sprintf("%s %s identified, but no version is visible, so we cannot tell whether %s up to date.", joinAnd(names), map[bool]string{true: "was", false: "were"}[one], map[bool]string{true: "it is", false: "they are"}[one])
+					}
+					out = append(out, report.NotScored{ID: sc.ID, Name: sc.Name, Reason: reason})
+					continue
+				}
+			}
+		}
+		keep = append(keep, sc)
+	}
+	if keep == nil {
+		keep = []report.Score{}
+	}
+	return keep, out
 }

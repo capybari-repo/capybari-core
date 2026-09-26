@@ -41,7 +41,7 @@ type slopGroup struct {
 var slopGroups = []slopGroup{
 	{
 		id: "ai-generation", name: "AI-generation signs", cap: 40,
-		weights: map[string]float64{"ai-boilerplate": 2, "placeholder-content": 2, "template-leftover": 1.5, "ai-builder": 1},
+		weights: map[string]float64{"ai-boilerplate": 2, "placeholder-content": 2, "demo-names": 0.5, "template-leftover": 1.5, "ai-builder": 1},
 		covers: map[analyzer.TargetKind][]string{
 			analyzer.TargetWebsite: {"ai-signals"}, analyzer.TargetRepository: {"ai-signals"},
 		},

@@ -189,8 +189,11 @@ type Report struct {
 	Summary       Summary `json:"summary"`
 	// Verdict is the buyer's summary: trust, finish and risk, with the
 	// reasons behind each and what was not checked. Shown first.
-	Verdict         *Verdict                   `json:"verdict,omitempty"`
-	Scores          []Score                    `json:"scores"`
+	Verdict *Verdict `json:"verdict,omitempty"`
+	Scores  []Score  `json:"scores"`
+	// NotScored lists scores that were withheld because there was nothing
+	// to judge, with the reason in plain words.
+	NotScored       []NotScored                `json:"not_scored,omitempty"`
 	Findings        []finding.Finding          `json:"findings"`
 	Facts           map[string]json.RawMessage `json:"facts"`
 	Capabilities    []CapabilityRun            `json:"capabilities"`
@@ -307,4 +310,11 @@ type Ceiling struct {
 	Max       int    `json:"max"`
 	Reason    string `json:"reason"`
 	FindingID string `json:"finding_id,omitempty"`
+}
+
+// NotScored is a score that was withheld for lack of evidence.
+type NotScored struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Reason string `json:"reason"`
 }

@@ -100,12 +100,26 @@ func fact[T any](st *State, key string) *T {
 	return &v
 }
 
+// ageText phrases how old t is, e.g. "3 months" or "1 day".
+func ageText(t, now time.Time) string {
+	switch a := ago(t, now); a {
+	case "today":
+		return "less than a day"
+	case "yesterday":
+		return "1 day"
+	default:
+		return strings.TrimSuffix(a, " ago")
+	}
+}
+
 // ago phrases how long before now t was, e.g. "3 weeks ago".
 func ago(t, now time.Time) string {
 	d := now.Sub(t)
 	switch days := int(d.Hours() / 24); {
 	case days < 1:
 		return "today"
+	case days == 1:
+		return "yesterday"
 	case days < 14:
 		return fmt.Sprintf("%d days ago", days)
 	case days < 60:
@@ -405,7 +419,7 @@ func (v *verdictInput) risk() report.VerdictAxis {
 	if id := v.identity; id != nil && !id.Registered.IsZero() && v.now.Sub(id.Registered) < 365*24*time.Hour {
 		young = true
 		support++
-		rs = append([]report.VerdictReason{{Text: fmt.Sprintf("Domain only %s old (registered %s, no track record yet)", strings.TrimSuffix(ago(id.Registered, v.now), " ago"), id.Registered.Format("Jan 2006")),
+		rs = append([]report.VerdictReason{{Text: fmt.Sprintf("Domain only %s old (registered %s, no track record yet)", ageText(id.Registered, v.now), id.Registered.Format("Jan 2006")),
 			Kind: "concern", Impact: finding.BuyerSupportCost, Category: "young-domain"}}, rs...)
 	}
 	thin := v.has("no-ops-trail")

@@ -93,3 +93,29 @@ func TestTrustScoreLowestCeilingWins(t *testing.T) {
 		t.Fatalf("no HTTPS (20) beats a 2-month domain (30): %+v", ts)
 	}
 }
+
+// A website whose technologies show no version gets no Technology Currency
+// score: 100 would only mean "nothing could be checked".
+func TestTechnologyCurrencyWithheldWithoutVersions(t *testing.T) {
+	web := func(c *analyzer.Capability) { c.Targets = []analyzer.TargetKind{analyzer.TargetWebsite} }
+	snap := &fake{c: capOf("web-snapshot", web)}
+	tech := &fake{c: capOf("web-tech", web, func(c *analyzer.Capability) {
+		c.Provides = []string{facts.KeyTechnologies}
+		c.Scores = []string{finding.DimEvolution}
+	}), run: func(*analyzer.Input) (*analyzer.Result, error) {
+		return &analyzer.Result{Evidence: map[string]any{facts.KeyTechnologies: facts.Technologies{Items: []facts.Technology{
+			{Name: "Cloudflare", Confidence: "high"}, {Name: "Next.js", Confidence: "high"}}}}}, nil
+	}}
+	r, _, err := newEngine(t, engine.Config{}, snap, tech).Analyze(context.Background(), analyzer.Target{Kind: analyzer.TargetWebsite, Input: "https://x.test", Display: "x.test"}, engine.Selection{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range r.Scores {
+		if s.ID == finding.DimEvolution {
+			t.Fatalf("Technology Currency must be withheld: %+v", s)
+		}
+	}
+	if len(r.NotScored) != 1 || r.NotScored[0].Reason != "Cloudflare and Next.js were identified, but no version is visible, so we cannot tell whether they are up to date." {
+		t.Fatalf("not scored: %+v", r.NotScored)
+	}
+}

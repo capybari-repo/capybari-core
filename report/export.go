@@ -140,6 +140,9 @@ func WriteMarkdown(w io.Writer, r *Report) error {
 			}
 			p("| %s | **%d** | %s | %s | %s |\n", s.Name, s.Value, rating, s.Confidence, mdEscape(summary))
 		}
+		for _, n := range r.NotScored {
+			p("| %s | — | not scored | — | %s |\n", n.Name, mdEscape(n.Reason))
+		}
 		for _, s := range r.Scores {
 			if len(s.Components) == 0 {
 				continue
