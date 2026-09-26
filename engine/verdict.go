@@ -33,13 +33,13 @@ func axisOf(f finding.Finding) string {
 	case "https", "tls", "mixed-content", "secret", "committed-env-file", "exposure", "malicious-package",
 		"unknown-package", "vulnerable-library", "vulnerability", "cookie", "security-header", "disclosure", "sri",
 		"insecure-credentials", "missing-legal", "missing-contact", "missing-refund",
-		"domain-new", "domain-expiring", "email-spoofable", "brand-mismatch":
+		"domain-new", "domain-expiring", "email-spoofable", "brand-mismatch", "brand-inconsistent", "app-no-track-record":
 		return report.AxisTrust
 	case "coming-soon", "pricing-stub", "broken-link", "dead-cta", "missing-docs":
 		return report.AxisFinish
 	case "purchase-path-unverified":
 		return report.AxisTrust
-	case "stale-content", "no-ops-trail", "linked-repo-inactive", "linked-repo-archived", "inactive-repository", "single-maintainer",
+	case "stale-content", "no-ops-trail", "linked-app-stale", "linked-repo-inactive", "linked-repo-archived", "inactive-repository", "single-maintainer",
 		"license-restriction", "unmaintained-dependency", "deprecated-package":
 		return report.AxisRisk
 	}
@@ -257,6 +257,14 @@ func (v *verdictInput) trust() report.VerdictAxis {
 		if len(c.Stores) > 0 {
 			pos = append(pos, positive("Distributed through "+strings.Join(c.Stores, ", ")))
 		}
+		if comp := v.completeness; comp != nil {
+			for _, app := range comp.Apps {
+				if app.Ratings >= 50 {
+					pos = append(pos, positive(fmt.Sprintf("%s: %.1f★ from %d ratings", app.Store, app.Rating, app.Ratings)))
+					break
+				}
+			}
+		}
 		switch {
 		case c.Privacy != "" && c.Terms != "":
 			pos = append(pos, positive("Privacy policy and terms published"))
@@ -412,6 +420,12 @@ func (v *verdictInput) risk() report.VerdictAxis {
 		}
 	}
 	if c := v.completeness; c != nil {
+		for _, app := range c.Apps {
+			if !app.Updated.IsZero() && v.now.Sub(app.Updated) < 180*24*time.Hour {
+				pos = append(pos, positive(fmt.Sprintf("%s app updated %s", app.Store, ago(app.Updated, v.now))))
+				break
+			}
+		}
 		for _, r := range c.Repos {
 			if !r.Archived && !r.PushedAt.IsZero() && v.now.Sub(r.PushedAt) < 180*24*time.Hour {
 				pos = append(pos, positive(fmt.Sprintf("Linked source repository updated %s", ago(r.PushedAt, v.now))))

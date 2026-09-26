@@ -442,6 +442,19 @@ type Completeness struct {
 	LatestDate       time.Time    `json:"latest_date,omitzero"`
 	LatestDateSource string       `json:"latest_date_source,omitempty"`
 	Repos            []LinkedRepo `json:"repos,omitempty"`
+	// Apps are App Store apps linked from the site, with their public
+	// listing data (Google Play has no public API and is not looked up).
+	Apps []LinkedApp `json:"apps,omitempty"`
+}
+
+// LinkedApp is an app-store listing linked from a website.
+type LinkedApp struct {
+	Store   string    `json:"store"`
+	URL     string    `json:"url"`
+	Name    string    `json:"name,omitempty"`
+	Updated time.Time `json:"updated,omitzero"`
+	Ratings int       `json:"ratings"`
+	Rating  float64   `json:"rating,omitempty"`
 }
 
 // LinkedRepo is a public source repository linked from a website.

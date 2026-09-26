@@ -60,6 +60,9 @@ var impactRules = map[string]impactRule{
 	"linked-repo-inactive":    {"", finding.Low},
 	"linked-repo-archived":    {"", finding.Low},
 	"missing-docs":            {"", finding.Low},
+	"linked-app-stale":        {"", finding.Low},
+	"app-no-track-record":     {"", finding.Low},
+	"brand-inconsistent":      {"", finding.Low},
 	"broken-link":             {"", finding.Low},
 	"dead-cta":                {"", finding.Low},
 	"domain-new":              {"", finding.Low},
@@ -113,7 +116,7 @@ var fearRank = map[string]int{
 	"email-spoofable": 10, "placeholder-content": 14, "vulnerable-library": 16, "vulnerability": 16, "unknown-package": 16,
 	"dead-cta": 18, "broken-link": 20, "domain-new": 22, "young-domain": 22, "no-ops-trail": 24, "missing-contact": 26,
 	"inactive-repository": 28, "license-restriction": 29,
-	"brand-mismatch": 40, "missing-docs": 42, "purchase-path-unverified": 45, "stale-content": 46, "single-maintainer": 47,
+	"brand-mismatch": 40, "brand-inconsistent": 41, "app-no-track-record": 41, "missing-docs": 42, "linked-app-stale": 44, "purchase-path-unverified": 45, "stale-content": 46, "single-maintainer": 47,
 	"unmaintained-dependency": 48, "missing-refund": 49, "domain-expiring": 49, "maintenance-signal": 50,
 }
 

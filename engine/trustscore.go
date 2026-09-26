@@ -147,6 +147,12 @@ func findingCost(f finding.Finding) (group string, pts float64, key string) {
 		return "identity", 5, ""
 	case c == "brand-mismatch":
 		return "identity", 6, ""
+	case c == "app-no-track-record":
+		return "identity", 4, ""
+	case c == "brand-inconsistent":
+		return "identity", 3, ""
+	case c == "linked-app-stale":
+		return "maintenance", sev(f, 6, 6, 6, 3), ""
 	case c == "placeholder-content":
 		return "ai", 15, ""
 	case c == "ai-boilerplate" || c == "template-leftover" || c == "scaffold-code" || c == "swallowed-errors" || c == "placeholder-config":
@@ -185,8 +191,10 @@ func findingCost(f finding.Finding) (group string, pts float64, key string) {
 	case c == "linked-repo-inactive" || c == "linked-repo-archived":
 		return "maintenance", sev(f, 6, 6, 6, 3), c
 	case c == "missing-tests":
-		return "maintenance", 8, ""
-	case c == "missing-ci" || c == "missing-license":
+		return "maintenance", 8, c
+	case c == "missing-ci":
+		return "maintenance", 4, c
+	case c == "missing-license":
 		return "maintenance", 4, ""
 	case c == "missing-readme" || c == "missing-lockfile":
 		return "maintenance", 3, ""
@@ -263,6 +271,17 @@ func (e *Engine) trustScore(st *State, fs []finding.Finding, scores []report.Sco
 		}
 		add(group, key, report.ShortTitle(f.Title), pts, f.ID)
 	}
+	// A shipped application without tests or CI is worse than a library
+	// or script without them: people depend on it running.
+	if fp := fact[facts.Fingerprint](st, facts.KeyFingerprint); fp != nil && shippedProduct(fp) {
+		for _, k := range []string{"maintenance/missing-tests", "maintenance/missing-ci"} {
+			if l, ok := byKey[k]; ok {
+				l.raw *= 1.5
+				l.text += " (in a shipped application)"
+			}
+		}
+	}
+
 	// Code-health issues scale with a codebase's size, so they count with
 	// diminishing weight: 4 issues cost 2 points, 100 cost 10.
 	if l, ok := byKey["maintenance/code-health"]; ok {
@@ -470,6 +489,21 @@ func (e *Engine) trustScore(st *State, fs []finding.Finding, scores []report.Sco
 		Capabilities: sortedRunIDs(st), Basis: basis, Components: comps, Deductions: deds, Ceilings: ceilings,
 		Methodology: MethodologyBase + "#trust-score",
 	}
+}
+
+// shippedProduct reports whether a repository looks like something people
+// run or buy (an application or a deployable service), not a library.
+func shippedProduct(fp *facts.Fingerprint) bool {
+	if fp.HasContainers {
+		return true
+	}
+	for _, t := range fp.ProjectTypes {
+		switch t {
+		case "web-backend", "web-frontend", "mobile-app", "desktop-app", "application", "cms-site":
+			return true
+		}
+	}
+	return false
 }
 
 // contentWords is the visible text a page needs to count as content.
