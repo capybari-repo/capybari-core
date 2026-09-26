@@ -113,7 +113,7 @@ func (e *Engine) Report(st *State) *report.Report {
 				top = append(top, fmt.Sprintf("%s (−%d)", lowerFirst(report.ShortTitle(d.Text)), d.Points))
 			}
 			if len(top) > 0 {
-				lead += ". Biggest deductions: " + strings.Join(top, "; ")
+				lead += ". Biggest negative impacts: " + strings.Join(top, "; ")
 			}
 			r.Summary.Headline = lead + "."
 		}

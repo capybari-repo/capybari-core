@@ -36,9 +36,11 @@ type Event struct {
 	Name       string
 	Status     string
 	Reason     string
-	Findings   int
-	Cached     bool
-	Duration   time.Duration
+	// Summary says what a finished capability looked at.
+	Summary  string
+	Findings int
+	Cached   bool
+	Duration time.Duration
 }
 
 // Config configures an Engine.
@@ -310,7 +312,7 @@ func (e *Engine) runOne(ctx context.Context, st *State, a analyzer.Analyzer, rec
 		out.Run.Reason = reason
 		out.Run.DurationMS = e.cfg.Now().Sub(start).Milliseconds()
 		out.Run.Findings = len(out.Findings)
-		e.emit(Event{Type: "finish", Capability: c.ID, Name: c.Name, Status: status, Reason: reason,
+		e.emit(Event{Type: "finish", Capability: c.ID, Name: c.Name, Status: status, Reason: reason, Summary: out.Run.Summary,
 			Findings: len(out.Findings), Cached: out.Run.Cached, Duration: e.cfg.Now().Sub(start)})
 		return out
 	}

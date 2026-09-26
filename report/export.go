@@ -108,15 +108,15 @@ func WriteMarkdown(w io.Writer, r *Report) error {
 			p("**Held at %d: %s.** No other signal can lift the score above this.\n\n", s.Value, mdEscape(s.Ceilings[0].Reason))
 		}
 		if len(s.Deductions) == 0 {
-			p("Nothing deducted.\n\n")
+			p("No negative impacts found.\n\n")
 		} else {
-			p("| Points | What cost points | Area |\n|---:|---|---|\n")
+			p("| Points | Negative impact | Area |\n|---:|---|---|\n")
 			for _, d := range s.Deductions {
 				p("| −%d | %s | %s |\n", d.Points, mdEscape(d.Text), d.Group)
 			}
 			p("\n")
 		}
-		p("_Starts at 100; every deficiency costs points and they add up. Critical conditions also set a ceiling the score cannot exceed._\n\n")
+		p("_Starts at 100; each negative impact lowers it, and they add up. Serious ones also set a limit the score cannot rise above._\n\n")
 	}
 
 	if r.Verdict != nil {

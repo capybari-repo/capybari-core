@@ -53,10 +53,10 @@ footer{margin-top:48px;color:var(--muted);font-size:12.5px}
 {{range .Scores}}{{if eq .ID "trust-score"}}
 <section><h2>Trust Score: <span class="{{.Rating}}">{{.Value}}/100</span> ({{.Grade}} · {{.Label}})</h2>
 {{if .Ceilings}}{{with index .Ceilings 0}}<p class="card" style="border-left:4px solid var(--poor)"><strong>Ceiling {{.Max}}: {{.Reason}}.</strong> No other signal can lift the score above its lowest ceiling.</p>{{end}}{{end}}
-<div class="tablewrap"><table><thead><tr><th>Points</th><th>What cost points</th><th>Area</th></tr></thead><tbody>
-{{range .Deductions}}<tr><td class="poor"><strong>−{{.Points}}</strong></td><td>{{if .FindingID}}<a href="#f-{{.FindingID}}">{{.Text}}</a>{{else}}{{.Text}}{{end}}</td><td class="muted">{{.Group}}</td></tr>{{else}}<tr><td colspan="3">Nothing deducted.</td></tr>{{end}}
+<div class="tablewrap"><table><thead><tr><th>Points</th><th>Negative impact</th><th>Area</th></tr></thead><tbody>
+{{range .Deductions}}<tr><td class="poor"><strong>−{{.Points}}</strong></td><td>{{if .FindingID}}<a href="#f-{{.FindingID}}">{{.Text}}</a>{{else}}{{.Text}}{{end}}</td><td class="muted">{{.Group}}</td></tr>{{else}}<tr><td colspan="3">No negative impacts found.</td></tr>{{end}}
 </tbody></table></div>
-<p class="muted">Starts at 100; every deficiency costs points and they add up. Critical conditions also set a ceiling the score cannot exceed.</p></section>
+<p class="muted">Starts at 100; each negative impact lowers it, and they add up. Serious ones also set a limit the score cannot rise above.</p></section>
 {{end}}{{end}}
 {{with .Verdict}}
 <section><h2>Verdict: {{.Headline}}</h2>
